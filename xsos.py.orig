@@ -4,21 +4,21 @@
 # xsos Python re-write by Jake Hunsaker <jake@redhat.com>
 #
 # ---> yes, my Python probably makes any other programmer's eyes bleed
-#	  I am well aware of this
+#      I am well aware of this
 #
 #
-#	This program is free software: you can redistribute it and/or modify
-#	it under the terms of the GNU General Public License as published by
-#	the Free Software Foundation, either version 3 of the License, or
-#	(at your option) any later version.
+#    This program is free software: you can redistribute it and/or modify
+#    it under the terms of the GNU General Public License as published by
+#    the Free Software Foundation, either version 3 of the License, or
+#    (at your option) any later version.
 #
-#	This program is distributed in the hope that it will be useful,
-#	but WITHOUT ANY WARRANTY; without even the implied warranty of
-#	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
-#	General Public License <gnu.org/licenses/gpl.html> for more details.
+#    This program is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+#    General Public License <gnu.org/licenses/gpl.html> for more details.
 #
 from __future__ import division
-import os, argparse, textwrap, re, datetime, time, logging, tarfile
+import os, argparse, textwrap, re, datetime, time
 
 
 # switches
@@ -31,7 +31,6 @@ parser.add_argument('-c', "--cpu", action="store_true", help='Print CPU informat
 parser.add_argument('-s', "--sysctl", action="store_true", help='Print all sysctl information')
 parser.add_argument('-i', "--ip", action="store_true", help='Print IP information')
 parser.add_argument('-g', "--bonding", action="store_true", help='Print bonding information')
-parser.add_argument('-r', "--rhev", action="store_true", help='Print RHEV Information')
 
 args = parser.parse_args()
 
@@ -53,19 +52,19 @@ statuses['systime'] = ['date']
 # Define colors - yay color!
 # Need more - build out later
 class colors:
-	HEADER = '\033[95m'
-	BLUE = '\033[94m'
-	GREEN = '\033[92m'
-	SECTION = '\033[93m'
-	RED = '\033[91m'
-	ENDC = '\033[0m'
-	BOLD = '\033[1m'
-	WHITE = '\033[37m'
-	HEADER_BOLD = '\033[95m' + '\033[1m'
-	WARN = '\033[33m'
-	PURPLE = '\033[35m'
-	CYAN = '\033[36m'
-	
+    HEADER = '\033[95m'
+    BLUE = '\033[94m'
+    GREEN = '\033[92m'
+    SECTION = '\033[93m'
+    RED = '\033[91m'
+    ENDC = '\033[0m'
+    BOLD = '\033[1m'
+    WHITE = '\033[37m'
+    HEADER_BOLD = '\033[95m' + '\033[1m'
+    WARN = '\033[33m'
+    PURPLE = '\033[35m'
+    CYAN = '\033[36m'
+    
 def find_rpm(target, rpm):
 	# from here we will pull specific targets for installed RPMS
 	rpm_state = False
@@ -226,9 +225,6 @@ def get_os_info(target):
 	if boottime and btime and ('not found' not in statuses['systime']):
 		sys = statuses['systime']			# Python strptime only works for timezone the 
 		index = sys.find(sys.split()[-2])	# local computer is set to, so we need to strip the TZ
-		###
-		# Heads up, I got an out of index error once... may need to rethink logic
-		###
 		systime = str(sys[0:index] + sys[index+3:len(sys)])
 		systimesec = time.mktime(datetime.datetime.strptime(systime, "%a %b  %d %H:%M:%S %Y").timetuple())		
 		uptime = str(datetime.timedelta(seconds=(int(systimesec) - int(btime))))
@@ -243,18 +239,18 @@ def get_os_info(target):
 	print colors.HEADER_BOLD + '\t Runlevel  : ' + colors.ENDC + statuses['runlevel']
 	print colors.HEADER_BOLD +  '\t SELinux   : ' + colors.ENDC + selstate
 	
-	print colors.HEADER_BOLD + '\t Kernel	: ' + colors.ENDC
+	print colors.HEADER_BOLD + '\t Kernel    : ' + colors.ENDC
 	print '\t   ' + colors.BLUE + colors.BOLD + 'Booted kernel  : ' + colors.ENDC + str(statuses['kernel']).split(" ")[2]
 	print '\t   ' + colors.BLUE + colors.BOLD + 'GRUB default   : '
 	print '\t   ' + colors.BLUE + colors.BOLD + 'Booted cmdline : ' + colors.ENDC
 	print '%15s' % ' ' + textwrap.fill(statuses['cmdline'], subsequent_indent='%15s' % ' ')
-	print '\t   ' + colors.BLUE + colors.BOLD + 'Taint-check	: ' + colors.ENDC + str(tainted)
+	print '\t   ' + colors.BLUE + colors.BOLD + 'Taint-check    : ' + colors.ENDC + str(tainted)
 	
 	print colors.GREEN + '%9s' % ' ' + colors.BOLD + '~ ' * 20 + colors.ENDC
 	
 	print colors.HEADER_BOLD  + '\t Sys time  : ' + colors.ENDC + statuses['systime']
 	print colors.HEADER_BOLD  + '\t Boot time : ' + colors.ENDC + boottime
-	print colors.HEADER_BOLD + '\t Uptime	: ' + colors.ENDC + uptime
+	print colors.HEADER_BOLD + '\t Uptime    : ' + colors.ENDC + uptime
 	print colors.HEADER_BOLD + '\t Load Avg  : ' + colors.WHITE +'[%s CPUs] ' %(num_cpus) + colors.ENDC \
 	 + loadavg
 	print colors.HEADER_BOLD + '\t /proc/stat: ' + colors.ENDC
@@ -325,12 +321,12 @@ def get_mem_info(target):
 	# print this all pretty
 	print colors.SECTION + colors.BOLD + "Memory " + colors.ENDC
 	print colors.HEADER + colors.BOLD + '\t Memory Statistics graphed : ' + colors.ENDC
-	print colors.BLUE + '\t\t Used	  : %8.2f GB ' %(used_mem / 1024) + usedgraph + colors.ENDC 
+	print colors.BLUE + '\t\t Used      : %8.2f GB ' %(used_mem / 1024) + usedgraph + colors.ENDC 
 	print colors.PURPLE + '\t\t Buffered  : %8.2f GB ' %(buffered_mem / 1024) + buffergraph + colors.ENDC
-	print colors.CYAN + '\t\t Cached	: %8.2f GB ' %(cached_mem / 1024) + cachedgraph + colors.ENDC
+	print colors.CYAN + '\t\t Cached    : %8.2f GB ' %(cached_mem / 1024) + cachedgraph + colors.ENDC
 	print colors.GREEN + '\t\t Hugepages : %8s MB ' %hugepages + hugepagegraph + colors.ENDC
-	print colors.RED + '\t\t Dirty	 : %8s MB ' %dirty_mem + dirtygraph + colors.ENDC
-	print colors.WHITE + '\t\t SLAB	  : %8s MB ' %slab + slabgraph + colors.ENDC
+	print colors.RED + '\t\t Dirty     : %8s MB ' %dirty_mem + dirtygraph + colors.ENDC
+	print colors.WHITE + '\t\t SLAB      : %8s MB ' %slab + slabgraph + colors.ENDC
 
 	print colors.HEADER + colors.BOLD + '\t RAM  :' + colors.ENDC
 	print '\t\t %6.2f GB total RAM on system' %(int(total_mem) / 1024)
@@ -416,13 +412,13 @@ def get_kernel_info(target):
 	print colors.SECTION + colors.BOLD + 'Kdump ' + colors.ENDC
 	print colors.HEADER_BOLD + '\t kexec-tools version : ' + colors.ENDC + kexec_ver
 	print colors.HEADER_BOLD + '\t Service enablement  : ' + colors.ENDC + kdump_status
-	print colors.HEADER_BOLD + '\t kdump initrd.img	: ' + colors.ENDC + initrd
+	print colors.HEADER_BOLD + '\t kdump initrd.img    : ' + colors.ENDC + initrd
 	print colors.HEADER_BOLD + '\t Memory Reservation  : ' + colors.ENDC
 	print colors.BLUE + colors.BOLD + '\t\t kernel arg   : ' + colors.ENDC + state
-	print colors.BLUE + colors.BOLD + '\t\t GRUB conf	: ' + colors.ENDC
-	print colors.HEADER_BOLD + '\t kdump.conf		  : ' + colors.ENDC
+	print colors.BLUE + colors.BOLD + '\t\t GRUB conf    : ' + colors.ENDC
+	print colors.HEADER_BOLD + '\t kdump.conf          : ' + colors.ENDC
 	for item in config:
-		print '\t\t\t		%s' %item
+		print '\t\t\t        %s' %item
 	print colors.BLUE + colors.BOLD + '\t\t path mount   : ' + colors.ENDC + mount_at
 	print colors.BLUE + colors.BOLD + '\t\t avail space  : ' + colors.ENDC + size		
 	print colors.HEADER_BOLD + '\t Kernel Panic sysctl : ' + colors.ENDC
@@ -542,7 +538,7 @@ def get_ip_info(target):
 					ip_ints[name] = [device,ipaddr,slaveof,hwaddr]	
 	
 	print colors.SECTION + colors.BOLD + 'IP ' + colors.ENDC
-	print colors.WHITE + '\t {:^15}		{:^20}	  {:^11}   {:^25}'.format('INT','IP ADDR', 'MEMBER OF','HW ADDR') + colors.ENDC
+	print colors.WHITE + '\t {:^15}        {:^20}      {:^11}   {:^25}'.format('INT','IP ADDR', 'MEMBER OF','HW ADDR') + colors.ENDC
 	print '\t' + '=' * 16 + ' ' * 6 + '=' * 23 + ' ' * 4 + '=' * 13 + ' ' * 5 + '=' * 19
 	for key in sorted(ip_ints):
 		value = ip_ints[key]
@@ -618,11 +614,11 @@ def get_bonding_info(target):
 				bond_devs[name] = (bond_mode, bond_opts, phys_devs, hw_addrs)
 			
 	print colors.SECTION + colors.BOLD + 'Bonding' + colors.ENDC
-	print colors.WHITE + '\t {:^10}	{:^20}   {:^30}   {:^34}'.format('Device', 'Mode', 'BONDING_OPTS', 'Slave Interfaces')
+	print colors.WHITE + '\t {:^10}    {:^20}   {:^30}   {:^34}'.format('Device', 'Mode', 'BONDING_OPTS', 'Slave Interfaces')
 	print '\t ' + '=' * 10 + '\t' + '=' * 19 + '\t  ' + '=' * 21 + '\t\t   ' + '=' * 26 + colors.ENDC
 	for item in sorted(bond_devs):
 		value = bond_devs[item]
-		print colors.GREEN + '\t {:<10}'.format(item) + colors.ENDC + '	 {:^20}'.format(value[0]) + '\t  {:<26}'.format(value[1]) + '{:>14} {:<18}'.format(value[2][0], value[3][0])
+		print colors.GREEN + '\t {:<10}'.format(item) + colors.ENDC + '     {:^20}'.format(value[0]) + '\t  {:<26}'.format(value[1]) + '{:>14} {:<18}'.format(value[2][0], value[3][0])
 		dev_count = 1
 		for each in value[2]:
 			try: 
@@ -632,347 +628,18 @@ def get_bonding_info(target):
 			except:
 				print colors.PURPLE + '\t' * 10 + '   ' + '- ' * 10 + colors.ENDC
 
-def get_rhev_info(target):
-	# grab / print basic information first
-	print ""
-	print colors.SECTION + colors.BOLD + "RHEV Information"
-	#print colors.SECTION + colors.BOLD + "----------------"
-	print ""
-
-	# Find RHEVM rpm
-	rhevm_ver = find_rpm(target, "rhevm-3")
-	print colors.PURPLE + "\t Version: " + colors.GREEN + rhevm_ver
-	
-	# Find simplified version for debug purposes
-	if "-3.0" in rhevm_ver:
-		simpleVer = "3.0"
-	elif "-3.1" in rhevm_ver:
-		simpleVer = "3.1"
-	elif "-3.2" in rhevm_ver:
-		simpleVer = "3.2"
-	else:
-		simpleVer = "Could not be found"
-		
-	#logging.warning('Found the simplified version of rpm: ' + simpleVer) 
-	
-	# Try to find database
-	database = False
-	fullPath = os.path.abspath(target)
-	
-	#logging.warning('Using the following as fullpath variable: ' + fullPath)
-	lcRoot = os.path.dirname(fullPath)
-	
-	#logging.warning('Using the following as lcRoot variable: ' + lcRoot)
-	if os.path.isdir(lcRoot + "/database"):
-		database = True
-		dbDir = lcRoot + "/database"
-	elif os.path.isdir(lcRoot + "/log-collector-data"):
-		lcdRoot = lcRoot + "/log-collector-data"
-		for f in os.listdir(lcdRoot):
-			if f.startswith("postgres") and f.endswith("tar"):
-				pgTar = tarfile.open(f)
-				pgTar.extractall(lcdRoot)
-				for file in os.walk(lcdRoot+"/"):
-					if file.startswith("sos_pgdump"):
-						print "Found the db!"
-						# finish this!!
-				
-		
-	# The following is only possible if we found the db above
-	if database:
-		print colors.PURPLE + "\t Database: " + colors.GREEN +"Located"
-		
-		# Compensate for 3.0 / 3.x database differences
-		if simpleVer == "3.1" or simpleVer == "3.2":
-			# Eval manager before moving on to db analysis
-			rhev_eval_mngr(dbDir)
-		elif simpleVer == "3.0":
-			print colors.WARN + "\t Not ready to parse 3.0 databases yet, may not be trustworthy!!"
-		else:
-			print colors.WARN + "\t" + simpleVer
-		
-		# Move on to the database
-		rhev_eval_db(dbDir)
-		
-	else:
-		print colors.WARN + "\t Database not found"
-		
-		# Eval manager even without the database being found
-		print ""
-		rhev_eval_mngr(target)
-	
-	
-# Method for evaulating the manager regardless of whether or not we find the database	
-# This method should expect to receive the original target path, that is, path to sosreport of manager
-def rhev_eval_mngr(target):
-	#logging.warning('rhev_eval_mngr has been called, beginning eval...')
-	print ""
-	print colors.HEADER_BOLD + "\t RHEV-M Overview"
-	
-# Method for evaluating the database for env information
-# This method should expect to be passed the directory containing the database
-def rhev_eval_db(dbDir):
-	#logging.warning('rhev_eval_db has been called, beginning eval...')
-	
-	if os.path.exists(dbDir + "/sos_pgdump.tar"):
-		dbTar = dbDir + "/sos_pgdump.tar"
-		#logging.warning('Found dbdump: ' + dbTar)
-		
-		#extract tar file
-		dbdump = tarfile.open(dbTar)
-		dbdump.extractall(dbDir+"/")
-		dbdump.close()
-		
-		# find relevant dat files for DCs, domains, and hosts in the database directory
-		dc_dat = dbDir + "/" + findDat(" storage_pool ", dbDir + "/restore.sql")
-		#logging.warning('Found dc_dat: ' + dc_dat)
-		domain_dat = dbDir + "/" + findDat(" storage_domain_static ", dbDir + "/restore.sql")
-		#logging.warning('Found domain_dat: ' + domain_dat)
-		host_dat = dbDir + "/" + findDat(" vds_static ", dbDir + "/restore.sql")
-		#logging.warning('Found host_dat: ' + host_dat)
-		vdc_opt_dat = dbDir + "/" + findDat(" vdc_options ", dbDir + "/restore.sql")
-		#logging.warning('Found options dat: ' + vdc_opt_dat)
-		vds_groups_dat = dbDir + "/" + findDat(" vds_groups ", dbDir + "/restore.sql")
-		
-		##########################
-		# Lookup common engine-config values
-		# Should be placed here before tables and formatted however the eval_rhev_mngr function is formatted
-		##########################
-		
-		opt_list = []
-		theFile = open(vdc_opt_dat,"r")
-		lines = theFile.readlines()
-		
-		raw_opt_list = ["AllowDuplicateMacAddresses",
-				    "MacPoolRanges",
-				    "vdsTimeout",
-				    "SpiceProxyDefualt",
-				    "FreeSpaceLow"]
-		
-		for l in lines:
-			for o in raw_opt_list:
-				if o in l:
-					o = o+","+l.split("\t")[2]
-					#logging.warning("Found opt config: " + o)
-					opt_list.append(o)
-					
-		# Print out table of options
-		print colors.HEADER_BOLD
-		print "\t {0:^26} {1:1} {2:^7}".format("Option Name","|","Value")
-		print "\t "+"-"*64+colors.GREEN
-		
-		for o in opt_list:
-			opt_details = o.split(",")
-			if len(opt_details) > 1:
-				print "\t {0:<26} {1:1} {2:<50}".format(opt_details[0],"|",opt_details[1])
-			else:
-				print "\t {0:<26} {1:1}".format(opt_details[0],"|")
-		print colors.ENDC
-		
-		##
-		# Find all DCs and store in list
-		##
-		
-		dc_list = []
-		theFile = open(dc_dat,"r")
-		lines = theFile.readlines()
-		
-		for n in lines:
-			vals = n.split("\t")
-			if len(vals) >= 2:
-				dc_uuid = vals[0]
-				dc_name = vals[1]
-				dc_compat = vals[8]
-				spm_host = vals[7]
-					
-				#logging.warning(dc_name +","+dc_uuid+","+dc_compat)
-				newDC = dc_name+","+dc_uuid+","+dc_compat
-				#logging.warning("Newest DC is: " + newDC)
-				
-				dc_list.append(newDC)
-		
-		#Print data center list
-		#headerStr = '%2s '+ colors.BLUE + '%3s %4s %5s %6s' % ("Data Center Name","|","UUID","|","Compatibility Version")
-		print colors.HEADER_BOLD
-		print "\t {0:<18} {1:1} {2:^36} {3:1} {4:^22}".format("Data Center Name","|","UUID","|","Compatibility Version")
-		print "\t "+"-"*83 + colors.GREEN
-	
-		for d in dc_list:
-			dc_details = d.split(",")
-			print "\t {0:<18} {1:1} {2:^36} {3:1} {4:^22}".format(dc_details[0],"|",dc_details[1],"|",dc_details[2])
-			
-		print colors.ENDC
-				
-		####### End of Data Center Parsing #######
-		
-		##
-		# Find all Storage Domains and store in list
-		##
-		
-		sd_list = []
-		theFile = open(domain_dat,"r")
-		lines = theFile.readlines()
-		
-		for n in lines:
-			vals = n.split("\t")
-			if len(vals) >= 2:
-				#print vals[1] + " - " + vals[0]
-				sd_uuid = vals[0]
-				sd_name = vals[2]
-				# sd_type: 0=unknown,1=NFS,2=FCP,3=iSCSI,4=ALL?
-				sd_type = vals[4]
-				if sd_type == "0":
-					sd_type = unknown
-				elif sd_type == "1":
-					sd_type = "NFS"
-				elif sd_type == "2":
-					sd_type = "FCP"
-				elif sd_type == "3":
-					sd_type = "iSCSI"
-				sd_master = ""
-				if vals[3] == "0":
-					sd_master = "*"					
-				#logging.warning(dc_name +","+dc_uuid+","+dc_compat)
-				newSD = sd_name+","+sd_uuid+","+sd_type+","+sd_master
-				#logging.warning("Newest DC is: " + newDC)
-				sd_list.append(newSD)
-		
-		#Print data center list
-		#headerStr = '%2s '+ colors.BLUE + '%3s %4s %5s %6s' % ("Data Center Name","|","UUID","|","Compatibility Version")
-		print colors.HEADER_BOLD + "\t {0:<21} {1:1} {2:^36} {3:1} {4:^12} {5:1} {6:^6}".format("Storage Domain Name","|","UUID","|","Storage Type","|","Master")
-		print "\t "+"-"*85+colors.GREEN
-		for d in sd_list:
-			sd_details = d.split(",")
-			print "\t {0:<21} {1:1} {2:^36} {3:1} {4:^12} {5:1} {6:^6}".format(sd_details[0],"|",sd_details[1],"|",sd_details[2],"|",sd_details[3])
-			
-		print colors.ENDC
-	
-	
-		##
-		# Find all hosts and store in list
-		##
-		
-		host_list = []
-		theFile = open(host_dat,"r")
-		lines = theFile.readlines()
-		
-		hostDirs = []
-		# look for all files in the parent of the passed 'dbDir', and if it is a dir then attempts to parse
-		rootDir = os.path.dirname(dbDir)
-		#print "rootDir: " + rootDir
-		for d in os.listdir(rootDir):
-			#print(rootDir+"/"+d)
-			if os.path.isdir(rootDir+"/"+d):
-				hostDirs.append(d)
-				#print("Appending dir: "+d)
-		
-		for n in lines:
-			vals = n.split("\t")
-			if len(vals) >= 2:
-				#print vals[1] + " - " + vals[0]
-				host_uuid = vals[0]
-				# determine if the host is SPM for a DC
-				if host_uuid == spm_host:
-					host_spm = "*"
-				else:
-					host_spm = ""
-				host_name = vals[1]
-				host_ip = vals[2]
-				host_release = "unknown"
-				
-				# determine host type, 0 = rhel, 2 = rhev-h
-				host_type = vals[8]					
-				if host_type == "0":
-					host_type = "RHEL"
-				elif host_type == "2":
-					host_type = "RHEV-H"
-								
-				# try and find release version
-				hostDirName = host_name.split(".")
-				for h in hostDirs:
-					#splitting here based on sosreport naming convention (<hostname>-<timestamp>)
-					names = h.split("-")
-					if names[0] == hostDirName[0]:
-						# this is a stupid hack, using '..' in the path name. stop being lazy and find a better alternative
-						releaseFile = open(dbDir+"/../"+h+"/etc/redhat-release")
-						releaseVer = releaseFile.readlines()
-						host_release = releaseVer[0].split("(")[1]
-						# strip the newline character at the end of the line
-						host_release = host_release.replace("\n","")
-						host_release = host_release.rstrip(")")
-						
-				# find host data center
-				theFile = open(vds_groups_dat,"r")
-				lines = theFile.readlines()
-						
-				for l in lines:
-					line = l.split("\t")
-					if vals[6] == line[0]:
-						host_dc_uuid = line[10]
-						for d in dc_list:
-							if d.split(",")[1] == host_dc_uuid:
-								host_dc = d.split(",")[0]
-								#print host_name + " was found in DC " + host_dc
-							else:
-								host_dc = "unknown"
-				
-				
-				#the below tries to parse host folder names based on the patter: <hostname>_<time_of_sosreport>/
-				
-				#logging.warning(dc_name +","+dc_uuid+","+dc_compat)
-				newHost = host_name+","+host_uuid+","+host_spm+","+host_type+","+host_release+","+host_dc
-				#logging.warning("Newest DC is: " + newDC)
-				host_list.append(newHost)
-		
-		#Print data center list
-		#headerStr = '%2s '+ colors.BLUE + '%3s %4s %5s %6s' % ("Data Center Name","|","UUID","|","Compatibility Version")
-		print colors.HEADER_BOLD + "\t {0:<20} {1:1} {2:^36} {3:1} {4:^15} {5:1} {6:^6} {7:1} {8:^16} {9:1} {10:^5}".format("Host Name","|","UUID","|","Data Center","|","Type","|","Release","|","SPM")
-		print "\t "+"-"*110+colors.GREEN
-		for d in host_list:
-			host_details = d.split(",")
-			print "\t {0:<20} {1:1} {2:^36} {3:1} {4:^15} {5:1} {6:^6} {7:1} {8:^16} {9:1} {10:^5}".format(host_details[0],"|",host_details[1],"|",host_details[5],"|",host_details[3],"|",host_details[4],"|",host_details[2])
-			
-		print colors.ENDC
-		
-		
-	else:
-		print colors.WARN + "Could not find a database file"
-		
-# Finds relevant files after dbdump has been extracted
-def findDat(table,restFile):
-	'''
-	Subroutine to find the dat file name in restore.sql
-	''' 
-	openFile = open(restFile, "r")
-	lines = openFile.readlines()
-	
-	# print "Looking for " + table
-	
-	for n in lines:
-		if n.find(table) != -1:
-			if n.find("dat") != -1:
-				datInd = n.find("PATH")
-				datFileName =  n[datInd+7:datInd+15]
-				if datFileName.endswith("dat"):
-					#print "Found dat line for " + table
-					#logging.warning('Return dat file: ' +datFileName)
-					return datFileName
-	
-	return -1
-
-
 #def getoffset(offset, v1, v2):
 #	return offset + (len(v2) - len(v1))
 
-#def format_color(data):																																										
-#  if 'eth' in data:																																											
-#	return '\033[94m' + data																																								  
-#  elif 'vlan' in data:																																										
-#	return '\033[95m' + data																																								  
-#  else:																																														
-#	return '\033[0m' + data   
-	
-def get_main(os, mem, kdump, cpu, sysctl, ip, bonding, rhev, target):
+#def format_color(data):                                                                                                                                                                        
+#  if 'eth' in data:                                                                                                                                                                            
+#    return '\033[94m' + data                                                                                                                                                                  
+#  elif 'vlan' in data:                                                                                                                                                                        
+#    return '\033[95m' + data                                                                                                                                                                  
+#  else:                                                                                                                                                                                        
+#    return '\033[0m' + data   
+    
+def get_main(os, mem, kdump, cpu, sysctl, ip, bonding, target):
 	if os:
 		get_os_info(target)
 	if mem:
@@ -987,11 +654,9 @@ def get_main(os, mem, kdump, cpu, sysctl, ip, bonding, rhev, target):
 		get_ip_info(target)
 	if bonding:
 		get_bonding_info(target)
-	if rhev:
-		get_rhev_info(target)
 			
 target = args.target[0]
 if not target.endswith('/'):
 	target = target + '/'
 
-get_main(args.os, args.memory, args.kdump, args.cpu, args.sysctl, args.ip, args.bonding, args.rhev, target)
+get_main(args.os, args.memory, args.kdump, args.cpu, args.sysctl, args.ip, args.bonding, target)
