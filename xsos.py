@@ -720,6 +720,7 @@ def rhev_eval_db(dbDir):
 		#logging.warning('Found host_dat: ' + host_dat)
 		vdc_opt_dat = dbDir + "/" + findDat(" vdc_options ", dbDir + "/restore.sql")
 		#logging.warning('Found options dat: ' + vdc_opt_dat)
+		vds_groups_dat = dbDir + "/" + findDat(" vds_groups ", dbDir + "/restore.sql")
 		
 		##########################
 		# Lookup common engine-config values
@@ -877,6 +878,7 @@ def rhev_eval_db(dbDir):
 				# try and find release version
 				hostDirName = host_name.split(".")
 				for h in hostDirs:
+					#splitting here based on sosreport naming convention (<hostname>-<timestamp>)
 					names = h.split("-")
 					if names[0] == hostDirName[0]:
 						# this is a stupid hack, using '..' in the path name. stop being lazy and find a better alternative
@@ -887,6 +889,20 @@ def rhev_eval_db(dbDir):
 						host_release = host_release.replace("\n","")
 						host_release = host_release.rstrip(")")
 						
+				# find host data center
+				clusters = []
+				theFile = open(vds_groups_dat,"r")
+				lines = theFile.readlines()
+						
+				for l in lines:
+					line = l.split("\t")
+					if vals[6] == line[0]:
+						host_dc_uuid = line[10]
+						for d in dc_list:
+							if d.split(",")[1] == host_dc_uuid:
+								host_dc = d.split(",")[0]
+								print host_name + " was found in DC " + host_dc
+				
 				
 				#the below tries to parse host folder names based on the patter: <hostname>_<time_of_sosreport>/
 				
