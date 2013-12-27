@@ -226,6 +226,9 @@ def get_os_info(target):
 	if boottime and btime and ('not found' not in statuses['systime']):
 		sys = statuses['systime']			# Python strptime only works for timezone the 
 		index = sys.find(sys.split()[-2])	# local computer is set to, so we need to strip the TZ
+		###
+		# Heads up, I got an out of index error once... may need to rethink logic
+		###
 		systime = str(sys[0:index] + sys[index+3:len(sys)])
 		systimesec = time.mktime(datetime.datetime.strptime(systime, "%a %b  %d %H:%M:%S %Y").timetuple())		
 		uptime = str(datetime.timedelta(seconds=(int(systimesec) - int(btime))))
@@ -633,7 +636,7 @@ def get_rhev_info(target):
 	# grab / print basic information first
 	print ""
 	print colors.SECTION + colors.BOLD + "RHEV Information"
-	print colors.SECTION + colors.BOLD + "----------------"
+	#print colors.SECTION + colors.BOLD + "----------------"
 	print ""
 
 	# Find RHEVM rpm
@@ -725,16 +728,11 @@ def rhev_eval_db(dbDir):
 		lines = theFile.readlines()
 		
 		for n in lines:
-			vals = n.split()
+			vals = n.split("\t")
 			if len(vals) >= 2:
-				#print vals[1] + " - " + vals[0]
 				dc_uuid = vals[0]
 				dc_name = vals[1]
-				# this if statement compenstates for environments where the "Default" dc and it's description have been left in place.
-				if dc_name == "Default":
-					dc_compat = vals[11]
-				else:
-					dc_compat = vals[9]
+				dc_compat = vals[8]
 					
 				#logging.warning(dc_name +","+dc_uuid+","+dc_compat)
 				newDC = dc_name+","+dc_uuid+","+dc_compat
@@ -744,14 +742,80 @@ def rhev_eval_db(dbDir):
 		
 		#Print data center list
 		#headerStr = '%2s '+ colors.BLUE + '%3s %4s %5s %6s' % ("Data Center Name","|","UUID","|","Compatibility Version")
-		print'%2s %3s %4s %5s %6s' % ("Data Center Name","|","UUID","|","Compatibility Version")
+		print colors.HEADER_BOLD
+		print "{0:<18} {1:1} {2:^38} {3:1} {4:^22}".format("Data Center Name","|","UUID","|","Compatibility Version")
+		print "-"*83 + colors.GREEN
+	
 		for d in dc_list:
 			dc_details = d.split(",")
-			print'%2s %3s %4s %5s %6s' % (dc_details[0],"|",dc_details[1],"|",dc_details[2])
+			print "{0:<18} {1:1} {2:^38} {3:1} {4:^22}".format(dc_details[0],"|",dc_details[1],"|",dc_details[2])
 			
 		print colors.ENDC
 				
+		####### End of Data Center Parsing #######
+		
+		##
+		# Find all Storage Domains and store in list
+		##
+		
+		sd_list = []
+		theFile = open(domain_dat,"r")
+		lines = theFile.readlines()
+		
+		for n in lines:
+			vals = n.split("\t")
+			if len(vals) >= 2:
+				#print vals[1] + " - " + vals[0]
+				sd_uuid = vals[0]
+				sd_name = vals[2]
+									
+				#logging.warning(dc_name +","+dc_uuid+","+dc_compat)
+				newSD = sd_name+","+sd_uuid
+				#logging.warning("Newest DC is: " + newDC)
+				sd_list.append(newSD)
+		
+		#Print data center list
+		#headerStr = '%2s '+ colors.BLUE + '%3s %4s %5s %6s' % ("Data Center Name","|","UUID","|","Compatibility Version")
+		print "{0:<21} {1:1} {2:^38} {3:1} {4:^22}".format("Storage Domain Name","|","UUID","|","Compatibility Version")
+		print "-"*86
+		for d in sd_list:
+			sd_details = d.split(",")
+			print "{0:<21} {1:1} {2:^38} {3:1} {4:^22}".format(sd_details[0],"|",sd_details[1],"|","")
+			
+		print colors.ENDC
 	
+	
+		##
+		# Find all hosts and store in list
+		##
+		
+		host_list = []
+		theFile = open(host_dat,"r")
+		lines = theFile.readlines()
+		
+		for n in lines:
+			vals = n.split("\t")
+			if len(vals) >= 2:
+				#print vals[1] + " - " + vals[0]
+				host_uuid = vals[0]
+				host_name = vals[1]
+				host_type = vals[8]					
+				#logging.warning(dc_name +","+dc_uuid+","+dc_compat)
+				newHost = host_name+","+host_uuid+","+host_type
+				#logging.warning("Newest DC is: " + newDC)
+				host_list.append(newHost)
+		
+		#Print data center list
+		#headerStr = '%2s '+ colors.BLUE + '%3s %4s %5s %6s' % ("Data Center Name","|","UUID","|","Compatibility Version")
+		print "{0:<20} {1:1} {2:^38} {3:1} {4:^8}".format("Host Name","|","UUID","|","Type")
+		print "-"*86
+		for d in host_list:
+			host_details = d.split(",")
+			print "{0:<20} {1:1} {2:^38} {3:1} {4:^8}".format(host_details[0],"|",host_details[1],"|","")
+			
+		print colors.ENDC
+		
+		
 	else:
 		print colors.WARN + "Could not find a database file"
 		
