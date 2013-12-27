@@ -641,7 +641,7 @@ def get_rhev_info(target):
 
 	# Find RHEVM rpm
 	rhevm_ver = find_rpm(target, "rhevm-3")
-	print colors.PURPLE + "Version: " + colors.GREEN + rhevm_ver
+	print colors.PURPLE + "\t Version: " + colors.GREEN + rhevm_ver
 	
 	# Find simplified version for debug purposes
 	if "-3.0" in rhevm_ver:
@@ -669,7 +669,7 @@ def get_rhev_info(target):
 		
 	# The following is only possible if we found the db above
 	if database:
-		print colors.PURPLE + "Database: " + colors.GREEN +"Database: Located"
+		print colors.PURPLE + "\t Database: " + colors.GREEN +"Located"
 		
 		# Compensate for 3.0 / 3.x database differences
 		if simpleVer == "3.1" or simpleVer == "3.2":
@@ -733,6 +733,7 @@ def rhev_eval_db(dbDir):
 				dc_uuid = vals[0]
 				dc_name = vals[1]
 				dc_compat = vals[8]
+				spm_host = vals[7]
 					
 				#logging.warning(dc_name +","+dc_uuid+","+dc_compat)
 				newDC = dc_name+","+dc_uuid+","+dc_compat
@@ -743,12 +744,12 @@ def rhev_eval_db(dbDir):
 		#Print data center list
 		#headerStr = '%2s '+ colors.BLUE + '%3s %4s %5s %6s' % ("Data Center Name","|","UUID","|","Compatibility Version")
 		print colors.HEADER_BOLD
-		print "{0:<18} {1:1} {2:^38} {3:1} {4:^22}".format("Data Center Name","|","UUID","|","Compatibility Version")
-		print "-"*83 + colors.GREEN
+		print "\t {0:<18} {1:1} {2:^38} {3:1} {4:^22}".format("Data Center Name","|","UUID","|","Compatibility Version")
+		print "\t "+"-"*83 + colors.GREEN
 	
 		for d in dc_list:
 			dc_details = d.split(",")
-			print "{0:<18} {1:1} {2:^38} {3:1} {4:^22}".format(dc_details[0],"|",dc_details[1],"|",dc_details[2])
+			print "\t {0:<18} {1:1} {2:^38} {3:1} {4:^22}".format(dc_details[0],"|",dc_details[1],"|",dc_details[2])
 			
 		print colors.ENDC
 				
@@ -776,11 +777,11 @@ def rhev_eval_db(dbDir):
 		
 		#Print data center list
 		#headerStr = '%2s '+ colors.BLUE + '%3s %4s %5s %6s' % ("Data Center Name","|","UUID","|","Compatibility Version")
-		print "{0:<21} {1:1} {2:^38} {3:1} {4:^22}".format("Storage Domain Name","|","UUID","|","Compatibility Version")
-		print "-"*86
+		print "\t {0:<21} {1:1} {2:^38} {3:1} {4:^22}".format("Storage Domain Name","|","UUID","|","Compatibility Version")
+		print "\t "+"-"*86
 		for d in sd_list:
 			sd_details = d.split(",")
-			print "{0:<21} {1:1} {2:^38} {3:1} {4:^22}".format(sd_details[0],"|",sd_details[1],"|","")
+			print "\t {0:<21} {1:1} {2:^38} {3:1} {4:^22}".format(sd_details[0],"|",sd_details[1],"|","")
 			
 		print colors.ENDC
 	
@@ -793,25 +794,64 @@ def rhev_eval_db(dbDir):
 		theFile = open(host_dat,"r")
 		lines = theFile.readlines()
 		
+		hostDirs = []
+		# look for all files in the parent of the passed 'dbDir', and if it is a dir then attempts to parse
+		rootDir = os.path.dirname(dbDir)
+		#print "rootDir: " + rootDir
+		for d in os.listdir(rootDir):
+			#print(rootDir+"/"+d)
+			if os.path.isdir(rootDir+"/"+d):
+				hostDirs.append(d)
+				#print("Appending dir: "+d)
+		
 		for n in lines:
 			vals = n.split("\t")
 			if len(vals) >= 2:
 				#print vals[1] + " - " + vals[0]
 				host_uuid = vals[0]
+				# determine if the host is SPM for a DC
+				if host_uuid == spm_host:
+					host_spm = "*"
+				else:
+					host_spm = ""
 				host_name = vals[1]
+				host_ip = vals[2]
+				host_release = "unknown"
+				
+				# determine host type, 0 = rhel, 2 = rhev-h
 				host_type = vals[8]					
+				if host_type == "0":
+					host_type = "RHEL"
+				elif host_type == "2":
+					host_type = "RHEV-H"
+								
+				# try and find release version
+				hostDirName = host_name.split(".")
+				for h in hostDirs:
+					names = h.split("-")
+					if names[0] == hostDirName[0]:
+						# this is a stupid hack, using '..' in the path name. stop being lazy and find a better alternative
+						releaseFile = open(dbDir+"/../"+h+"/etc/redhat-release")
+						releaseVer = releaseFile.readlines()
+						host_release = releaseVer[0].split("(")[1]
+						host_release = host_release.replace("\n","")
+						host_release = host_release.rstrip(")")
+						
+				
+				#the below tries to parse host folder names based on the patter: <hostname>_<time_of_sosreport>/
+				
 				#logging.warning(dc_name +","+dc_uuid+","+dc_compat)
-				newHost = host_name+","+host_uuid+","+host_type
+				newHost = host_name+","+host_uuid+","+host_spm+","+host_type+","+host_release
 				#logging.warning("Newest DC is: " + newDC)
 				host_list.append(newHost)
 		
 		#Print data center list
 		#headerStr = '%2s '+ colors.BLUE + '%3s %4s %5s %6s' % ("Data Center Name","|","UUID","|","Compatibility Version")
-		print "{0:<20} {1:1} {2:^38} {3:1} {4:^8}".format("Host Name","|","UUID","|","Type")
-		print "-"*86
+		print "\t {0:<16} {1:1} {2:^36} {3:1} {4:^8} {5:1} {6:^18} {7:1} {8:^5}".format("Host Name","|","UUID","|","Type","|","Release","|","SPM")
+		print "\t "+"-"*96
 		for d in host_list:
 			host_details = d.split(",")
-			print "{0:<20} {1:1} {2:^38} {3:1} {4:^8}".format(host_details[0],"|",host_details[1],"|","")
+			print "\t {0:<16} {1:1} {2:^36} {3:1} {4:^8} {5:1} {6:^18} {7:1} {8:^5}".format(host_details[0],"|",host_details[1],"|",host_details[3],"|",host_details[4],"|",host_details[2])
 			
 		print colors.ENDC
 		
