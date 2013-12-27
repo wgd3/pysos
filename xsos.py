@@ -676,7 +676,7 @@ def get_rhev_info(target):
 			# Eval manager before moving on to db analysis
 			rhev_eval_mngr(dbDir)
 		elif simpleVer == "3.0":
-			print colors.WARN + "Not ready to parse 3.0 databases yet"
+			print colors.WARN + "\t Not ready to parse 3.0 databases yet, may not be trustworthy!!"
 		else:
 			print colors.WARN + simpleVer
 		
@@ -715,7 +715,7 @@ def rhev_eval_db(dbDir):
 		dc_dat = dbDir + "/" + findDat(" storage_pool ", dbDir + "/restore.sql")
 		#logging.warning('Found dc_dat: ' + dc_dat)
 		domain_dat = dbDir + "/" + findDat(" storage_domain_static ", dbDir + "/restore.sql")
-		#logging.warning('Found domain_dat: ' + domain_dat)
+		logging.warning('Found domain_dat: ' + domain_dat)
 		host_dat = dbDir + "/" + findDat(" vds_static ", dbDir + "/restore.sql")
 		#logging.warning('Found host_dat: ' + host_dat)
 		
@@ -769,19 +769,31 @@ def rhev_eval_db(dbDir):
 				#print vals[1] + " - " + vals[0]
 				sd_uuid = vals[0]
 				sd_name = vals[2]
-									
+				# sd_type: 0=unknown,1=NFS,2=FCP,3=iSCSI,4=ALL?
+				sd_type = vals[4]
+				if sd_type == "0":
+					sd_type = unknown
+				elif sd_type == "1":
+					sd_type = "NFS"
+				elif sd_type == "2":
+					sd_type = "FCP"
+				elif sd_type == "3":
+					sd_type = "iSCSI"
+				sd_master = ""
+				if vals[3] == "0":
+					sd_master = "*"					
 				#logging.warning(dc_name +","+dc_uuid+","+dc_compat)
-				newSD = sd_name+","+sd_uuid
+				newSD = sd_name+","+sd_uuid+","+sd_type+","+sd_master
 				#logging.warning("Newest DC is: " + newDC)
 				sd_list.append(newSD)
 		
 		#Print data center list
 		#headerStr = '%2s '+ colors.BLUE + '%3s %4s %5s %6s' % ("Data Center Name","|","UUID","|","Compatibility Version")
-		print colors.HEADER_BOLD + "\t {0:<21} {1:1} {2:^36} {3:1} {4:^22}".format("Storage Domain Name","|","UUID","|","Compatibility Version")
-		print "\t "+"-"*86+colors.GREEN
+		print colors.HEADER_BOLD + "\t {0:<21} {1:1} {2:^36} {3:1} {4:^12} {5:1} {6:^6}".format("Storage Domain Name","|","UUID","|","Storage Type","|","Master")
+		print "\t "+"-"*85+colors.GREEN
 		for d in sd_list:
 			sd_details = d.split(",")
-			print "\t {0:<21} {1:1} {2:^36} {3:1} {4:^22}".format(sd_details[0],"|",sd_details[1],"|","")
+			print "\t {0:<21} {1:1} {2:^36} {3:1} {4:^12} {5:1} {6:^6}".format(sd_details[0],"|",sd_details[1],"|",sd_details[2],"|",sd_details[3])
 			
 		print colors.ENDC
 	
@@ -834,6 +846,7 @@ def rhev_eval_db(dbDir):
 						releaseFile = open(dbDir+"/../"+h+"/etc/redhat-release")
 						releaseVer = releaseFile.readlines()
 						host_release = releaseVer[0].split("(")[1]
+						# strip the newline character at the end of the line
 						host_release = host_release.replace("\n","")
 						host_release = host_release.rstrip(")")
 						
