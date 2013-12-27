@@ -678,7 +678,7 @@ def get_rhev_info(target):
 		elif simpleVer == "3.0":
 			print colors.WARN + "\t Not ready to parse 3.0 databases yet, may not be trustworthy!!"
 		else:
-			print colors.WARN + simpleVer
+			print colors.WARN + "\t" + simpleVer
 		
 		# Move on to the database
 		rhev_eval_db(dbDir)
@@ -696,6 +696,7 @@ def get_rhev_info(target):
 def rhev_eval_mngr(target):
 	#logging.warning('rhev_eval_mngr has been called, beginning eval...')
 	print ""
+	print colors.HEADER_BOLD + "\t RHEV-M Overview"
 	
 # Method for evaluating the database for env information
 # This method should expect to be passed the directory containing the database
@@ -890,7 +891,6 @@ def rhev_eval_db(dbDir):
 						host_release = host_release.rstrip(")")
 						
 				# find host data center
-				clusters = []
 				theFile = open(vds_groups_dat,"r")
 				lines = theFile.readlines()
 						
@@ -901,23 +901,25 @@ def rhev_eval_db(dbDir):
 						for d in dc_list:
 							if d.split(",")[1] == host_dc_uuid:
 								host_dc = d.split(",")[0]
-								print host_name + " was found in DC " + host_dc
+								#print host_name + " was found in DC " + host_dc
+							else:
+								host_dc = "unknown"
 				
 				
 				#the below tries to parse host folder names based on the patter: <hostname>_<time_of_sosreport>/
 				
 				#logging.warning(dc_name +","+dc_uuid+","+dc_compat)
-				newHost = host_name+","+host_uuid+","+host_spm+","+host_type+","+host_release
+				newHost = host_name+","+host_uuid+","+host_spm+","+host_type+","+host_release+","+host_dc
 				#logging.warning("Newest DC is: " + newDC)
 				host_list.append(newHost)
 		
 		#Print data center list
 		#headerStr = '%2s '+ colors.BLUE + '%3s %4s %5s %6s' % ("Data Center Name","|","UUID","|","Compatibility Version")
-		print colors.HEADER_BOLD + "\t {0:<20} {1:1} {2:^36} {3:1} {4:^6} {5:1} {6:^16} {7:1} {8:^5}".format("Host Name","|","UUID","|","Type","|","Release","|","SPM")
-		print "\t "+"-"*98+colors.GREEN
+		print colors.HEADER_BOLD + "\t {0:<20} {1:1} {2:^36} {3:1} {4:^15} {5:1} {6:^6} {7:1} {8:^16} {9:1} {10:^5}".format("Host Name","|","UUID","|","Data Center","|","Type","|","Release","|","SPM")
+		print "\t "+"-"*110+colors.GREEN
 		for d in host_list:
 			host_details = d.split(",")
-			print "\t {0:<20} {1:1} {2:^36} {3:1} {4:^6} {5:1} {6:^16} {7:1} {8:^5}".format(host_details[0],"|",host_details[1],"|",host_details[3],"|",host_details[4],"|",host_details[2])
+			print "\t {0:<20} {1:1} {2:^36} {3:1} {4:^15} {5:1} {6:^6} {7:1} {8:^16} {9:1} {10:^5}".format(host_details[0],"|",host_details[1],"|",host_details[5],"|",host_details[3],"|",host_details[4],"|",host_details[2])
 			
 		print colors.ENDC
 		
