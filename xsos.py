@@ -666,6 +666,17 @@ def get_rhev_info(target):
 	if os.path.isdir(lcRoot + "/database"):
 		database = True
 		dbDir = lcRoot + "/database"
+	elif os.path.isdir(lcRoot + "/log-collector-data"):
+		lcdRoot = lcRoot + "/log-collector-data"
+		for f in os.listdir(lcdRoot):
+			if f.startswith("postgres") and f.endswith("tar"):
+				pgTar = tarfile.open(f)
+				pgTar.extractall(lcdRoot)
+				for file in os.walk(lcdRoot+"/"):
+					if file.startswith("sos_pgdump"):
+						print "Found the db!"
+						# finish this!!
+				
 		
 	# The following is only possible if we found the db above
 	if database:
@@ -684,7 +695,7 @@ def get_rhev_info(target):
 		rhev_eval_db(dbDir)
 		
 	else:
-		print colors.WARN + "Database not found"
+		print colors.WARN + "\t Database not found"
 		
 		# Eval manager even without the database being found
 		print ""
