@@ -715,9 +715,46 @@ def rhev_eval_db(dbDir):
 		dc_dat = dbDir + "/" + findDat(" storage_pool ", dbDir + "/restore.sql")
 		#logging.warning('Found dc_dat: ' + dc_dat)
 		domain_dat = dbDir + "/" + findDat(" storage_domain_static ", dbDir + "/restore.sql")
-		logging.warning('Found domain_dat: ' + domain_dat)
+		#logging.warning('Found domain_dat: ' + domain_dat)
 		host_dat = dbDir + "/" + findDat(" vds_static ", dbDir + "/restore.sql")
 		#logging.warning('Found host_dat: ' + host_dat)
+		vdc_opt_dat = dbDir + "/" + findDat(" vdc_options ", dbDir + "/restore.sql")
+		#logging.warning('Found options dat: ' + vdc_opt_dat)
+		
+		##########################
+		# Lookup common engine-config values
+		# Should be placed here before tables and formatted however the eval_rhev_mngr function is formatted
+		##########################
+		
+		opt_list = []
+		theFile = open(vdc_opt_dat,"r")
+		lines = theFile.readlines()
+		
+		raw_opt_list = ["AllowDuplicateMacAddresses",
+				    "MacPoolRanges",
+				    "vdsTimeout",
+				    "SpiceProxyDefualt",
+				    "FreeSpaceLow"]
+		
+		for l in lines:
+			for o in raw_opt_list:
+				if o in l:
+					o = o+","+l.split("\t")[2]
+					#logging.warning("Found opt config: " + o)
+					opt_list.append(o)
+					
+		# Print out table of options
+		print colors.HEADER_BOLD
+		print "\t {0:^26} {1:1} {2:^7}".format("Option Name","|","Value")
+		print "\t "+"-"*64+colors.GREEN
+		
+		for o in opt_list:
+			opt_details = o.split(",")
+			if len(opt_details) > 1:
+				print "\t {0:<26} {1:1} {2:<50}".format(opt_details[0],"|",opt_details[1])
+			else:
+				print "\t {0:<26} {1:1}".format(opt_details[0],"|")
+		print colors.ENDC
 		
 		##
 		# Find all DCs and store in list
@@ -860,11 +897,11 @@ def rhev_eval_db(dbDir):
 		
 		#Print data center list
 		#headerStr = '%2s '+ colors.BLUE + '%3s %4s %5s %6s' % ("Data Center Name","|","UUID","|","Compatibility Version")
-		print colors.HEADER_BOLD + "\t {0:<20} {1:1} {2:^36} {3:1} {4:^6} {5:1} {6:^18} {7:1} {8:^5}".format("Host Name","|","UUID","|","Type","|","Release","|","SPM")
+		print colors.HEADER_BOLD + "\t {0:<20} {1:1} {2:^36} {3:1} {4:^6} {5:1} {6:^16} {7:1} {8:^5}".format("Host Name","|","UUID","|","Type","|","Release","|","SPM")
 		print "\t "+"-"*98+colors.GREEN
 		for d in host_list:
 			host_details = d.split(",")
-			print "\t {0:<20} {1:1} {2:^36} {3:1} {4:^6} {5:1} {6:^18} {7:1} {8:^5}".format(host_details[0],"|",host_details[1],"|",host_details[3],"|",host_details[4],"|",host_details[2])
+			print "\t {0:<20} {1:1} {2:^36} {3:1} {4:^6} {5:1} {6:^16} {7:1} {8:^5}".format(host_details[0],"|",host_details[1],"|",host_details[3],"|",host_details[4],"|",host_details[2])
 			
 		print colors.ENDC
 		
