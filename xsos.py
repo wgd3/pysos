@@ -777,8 +777,8 @@ def rhev_eval_db(dbDir):
 		
 		#Print data center list
 		#headerStr = '%2s '+ colors.BLUE + '%3s %4s %5s %6s' % ("Data Center Name","|","UUID","|","Compatibility Version")
-		print "\t {0:<21} {1:1} {2:^38} {3:1} {4:^22}".format("Storage Domain Name","|","UUID","|","Compatibility Version")
-		print "\t "+"-"*86
+		print colors.HEADER_BOLD + "\t {0:<21} {1:1} {2:^38} {3:1} {4:^22}".format("Storage Domain Name","|","UUID","|","Compatibility Version")
+		print "\t "+"-"*86+colors.GREEN
 		for d in sd_list:
 			sd_details = d.split(",")
 			print "\t {0:<21} {1:1} {2:^38} {3:1} {4:^22}".format(sd_details[0],"|",sd_details[1],"|","")
@@ -847,8 +847,8 @@ def rhev_eval_db(dbDir):
 		
 		#Print data center list
 		#headerStr = '%2s '+ colors.BLUE + '%3s %4s %5s %6s' % ("Data Center Name","|","UUID","|","Compatibility Version")
-		print "\t {0:<16} {1:1} {2:^36} {3:1} {4:^8} {5:1} {6:^18} {7:1} {8:^5}".format("Host Name","|","UUID","|","Type","|","Release","|","SPM")
-		print "\t "+"-"*96
+		print colors.HEADER_BOLD + "\t {0:<16} {1:1} {2:^36} {3:1} {4:^8} {5:1} {6:^18} {7:1} {8:^5}".format("Host Name","|","UUID","|","Type","|","Release","|","SPM")
+		print "\t "+"-"*96+colors.GREEN
 		for d in host_list:
 			host_details = d.split(",")
 			print "\t {0:<16} {1:1} {2:^36} {3:1} {4:^8} {5:1} {6:^18} {7:1} {8:^5}".format(host_details[0],"|",host_details[1],"|",host_details[3],"|",host_details[4],"|",host_details[2])
