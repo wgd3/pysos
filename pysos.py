@@ -2,6 +2,7 @@
 # xsos re-written in Python
 # xsos for BASH originally written by Ryan Sawhill <rsaw@redhat.com>
 # xsos Python re-write by Jake Hunsaker <jake@redhat.com>
+# rhev plugin written by Wallace Daniel <wdaniel@redhat.com>
 #
 # ---> yes, my Python probably makes any other programmer's eyes bleed
 #      I am well aware of this
@@ -19,7 +20,10 @@
 #
 from __future__ import division
 from itertools import groupby
-import os, argparse, textwrap, re, datetime, time
+#from rhevlcbridge.database import Database
+from rhevlcbridge import *
+import os, argparse, textwrap, re, datetime, time, tarfile
+
 
 
 # switches
@@ -837,42 +841,11 @@ def rhev_eval_db(dbDir):
 	if os.path.exists(dbDir + "/sos_pgdump.tar"):
 		dbTar = dbDir + "/sos_pgdump.tar"
 		#logging.warning('Found dbdump: ' + dbTar)
-		
-		#extract tar file
-		dbdump = tarfile.open(dbTar)
-		dbdump.extractall(dbDir+"/")
-		dbdump.close()
-		
-		# find relevant dat files for DCs, domains, and hosts in the database directory
-		dc_dat = dbDir + "/" + findDat(" storage_pool ", dbDir + "/restore.sql")
-		#logging.warning('Found dc_dat: ' + dc_dat)
-		domain_dat = dbDir + "/" + findDat(" storage_domain_static ", dbDir + "/restore.sql")
-		#logging.warning('Found domain_dat: ' + domain_dat)
-		host_dat = dbDir + "/" + findDat(" vds_static ", dbDir + "/restore.sql")
-		#logging.warning('Found host_dat: ' + host_dat)
-		
-		##
-		# Find all DCs and store in list
-		##
-		
-		dc_list = []
-		theFile = open(dc_dat,"r")
-		lines = theFile.readlines()
-		
-		for n in lines:
-			vals = n.split("\t")
-			if len(vals) >= 2:
-				dc_uuid = vals[0]
-				dc_name = vals[1]
-				dc_compat = vals[8]
-				spm_host = vals[7]
-					
-				#logging.warning(dc_name +","+dc_uuid+","+dc_compat)
-				newDC = dc_name+","+dc_uuid+","+dc_compat
-				#logging.warning("Newest DC is: " + newDC)
+		masterDB = Database(dbTar)
+
+		# create data center list
+		dc_list = masterDB.get_data_centers()
 				
-				dc_list.append(newDC)
-		
 		#Print data center list
 		#headerStr = '%2s '+ colors.BLUE + '%3s %4s %5s %6s' % ("Data Center Name","|","UUID","|","Compatibility Version")
 		print colors.HEADER_BOLD
@@ -880,8 +853,8 @@ def rhev_eval_db(dbDir):
 		print "\t "+"-"*83 + colors.GREEN
 	
 		for d in dc_list:
-			dc_details = d.split(",")
-			print "\t {0:<18} {1:1} {2:^36} {3:1} {4:^22}".format(dc_details[0],"|",dc_details[1],"|",dc_details[2])
+			#dc_details = d.split(",")
+			print "\t {0:<18} {1:1} {2:^36} {3:1} {4:^22}".format(d.get_name(),"|",d.get_uuid(),"|",d.get_compat())
 			
 		print colors.ENDC
 				
@@ -904,7 +877,7 @@ def rhev_eval_db(dbDir):
 				# sd_type: 0=unknown,1=NFS,2=FCP,3=iSCSI,4=ALL?
 				sd_type = vals[4]
 				if sd_type == "0":
-					sd_type = unknown
+					sd_type = "unknown"
 				elif sd_type == "1":
 					sd_type = "NFS"
 				elif sd_type == "2":
