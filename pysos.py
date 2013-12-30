@@ -19,7 +19,7 @@
 #
 from __future__ import division
 from itertools import groupby
-import os, argparse, textwrap, re, datetime, time
+import os, argparse, textwrap, re, datetime, time, tarfile
 
 
 # switches
