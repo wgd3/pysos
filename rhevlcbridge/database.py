@@ -28,40 +28,45 @@ class Database():
 		'''
 		Constructor
 		'''
-		dbDir = os.path.dirname(dbFile)+"/"
+		self.dbDir = os.path.dirname(dbFile)+"/"
 		tarFile = tarfile.open(dbFile)
-		self.unpack(tarFile, dbDir)
+		self.unpack(tarFile, self.dbDir)
 		
 		# Now that we're unpacked, move on to gathering information
-		data_centers = self.gatherDataCenters()
-		storage_domains = self.gatherStorageDomains()
-		hosts = self.gatherHosts()
+		self.data_centers = self.gatherDataCenters()
+		self.storage_domains = self.gatherStorageDomains()
+		self.hosts = self.gatherHosts()
 
 	def get_data_centers(self):
-		return self.__data_centers
+		return self.data_centers
 
 
 	def get_storage_domains(self):
-		return self.__storage_domains
+		return self.storage_domains
 
 
 	def get_hosts(self):
-		return self.__hosts
+		return self.hosts
 
 
 	
 	def unpack(self, tarFile, dbDir):
 		# Start with extraction
+		#print "Extracting..."
 		tarFile.extractall(dbDir)
 		
 		# then set most of the needed variables for future functions
-		dat_files = ["data_center_dat",
+		#print "Setting dat files..."
+		self.dat_files = ["data_center_dat",
 					 "storage_domain_dat",
 					 "host_dat"]
 		
-		dat_files[0] = dat_files[0] +","+ self.findDat(" storage_pool ", dbDir+"restore.sql")
-		dat_files[1] = dat_files[1] +","+ self.findDat(" storage_domain_static ", dbDir+"restore.sql")
-		dat_files[2] = dat_files[2] +","+ self.findDat(" vds_static ", dbDir+"restore.sql")	
+		#print self.dat_files[0]
+		self.dat_files[0] = self.dat_files[0] +","+ self.findDat(" storage_pool ", dbDir+"restore.sql")
+		#print "Found dat file: " + self.dat_files[0]
+		#print "Passing this to the function: " + self.dat_files[0].split(",")[1]
+		self.dat_files[1] = self.dat_files[1] +","+ self.findDat(" storage_domain_static ", dbDir+"restore.sql")
+		self.dat_files[2] = self.dat_files[2] +","+ self.findDat(" vds_static ", dbDir+"restore.sql")	
 		
 		
 	def findDat(self,table,restFile):
@@ -90,14 +95,17 @@ class Database():
 		This method returns a list of comma-separated details of the Data Center
 		'''
 		dc_list = []
+		#print self.dbDir
+		#print self.dat_files[0]
 		dat_file = self.dbDir+self.dat_files[0].split(",")[1]
 		openDat = open(dat_file,"r")
 		
-		lines = openDat.readlines()
+		lines = openDat.readlines()		
 		
 		for l in lines:
-			newDC = DataCenter(l.split(","))
-			dc_list.append(newDC)
+			if len(l.split("\t")) > 1:
+				newDC = DataCenter(l.split("\t"))
+				dc_list.append(newDC)
 			
 		openDat.close()
 		return dc_list
@@ -113,8 +121,9 @@ class Database():
 		lines = openDat.readlines()
 		
 		for l in lines:
-			newSD = StorageDomain(l.split(","))
-			sd_list.append(newSD)
+			if l.split(",") > 1:
+				newSD = StorageDomain(l.split(","))
+				sd_list.append(newSD)
 			
 		openDat.close()
 		return sd_list

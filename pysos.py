@@ -860,45 +860,17 @@ def rhev_eval_db(dbDir):
 				
 		####### End of Data Center Parsing #######
 		
-		##
-		# Find all Storage Domains and store in list
-		##
-		
-		sd_list = []
-		theFile = open(domain_dat,"r")
-		lines = theFile.readlines()
-		
-		for n in lines:
-			vals = n.split("\t")
-			if len(vals) >= 2:
-				#print vals[1] + " - " + vals[0]
-				sd_uuid = vals[0]
-				sd_name = vals[2]
-				# sd_type: 0=unknown,1=NFS,2=FCP,3=iSCSI,4=ALL?
-				sd_type = vals[4]
-				if sd_type == "0":
-					sd_type = "unknown"
-				elif sd_type == "1":
-					sd_type = "NFS"
-				elif sd_type == "2":
-					sd_type = "FCP"
-				elif sd_type == "3":
-					sd_type = "iSCSI"
-				sd_master = ""
-				if vals[3] == "0":
-					sd_master = "*"					
-				#logging.warning(dc_name +","+dc_uuid+","+dc_compat)
-				newSD = sd_name+","+sd_uuid+","+sd_type+","+sd_master
-				#logging.warning("Newest DC is: " + newDC)
-				sd_list.append(newSD)
-		
+		sd_list = masterDB.get_storage_domains()
+				
+	
 		#Print data center list
 		#headerStr = '%2s '+ colors.BLUE + '%3s %4s %5s %6s' % ("Data Center Name","|","UUID","|","Compatibility Version")
 		print colors.HEADER_BOLD + "\t {0:<21} {1:1} {2:^36} {3:1} {4:^12} {5:1} {6:^6}".format("Storage Domain Name","|","UUID","|","Storage Type","|","Master")
 		print "\t "+"-"*85+colors.GREEN
 		for d in sd_list:
-			sd_details = d.split(",")
-			print "\t {0:<21} {1:1} {2:^36} {3:1} {4:^12} {5:1} {6:^6}".format(sd_details[0],"|",sd_details[1],"|",sd_details[2],"|",sd_details[3])
+			print d.get_name()
+			#sd_details = d.split(",")
+			print "\t {0:<21} {1:1} {2:^36} {3:1} {4:^12} {5:1} {6:^6}".format(d.get_name()[0],"|",d.get_uuid(),"|",d.get_storage_type(),"|",d.get_master())
 			
 		print colors.ENDC
 	

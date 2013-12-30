@@ -20,17 +20,15 @@ class Host():
 		'''
 		This constructor assumes it is being passed a comma separated list consisting of all elements in a line from the dat file
 		'''
-		details = []
+		details = csvList
 		
-		for d in csvList:
-			details.append(d)
-		
-		self.uuid = details[0]
-		self.name = details[1]
-		self.host_dc_uuid = details[6]
-		self.ip_addr = details[2]
-		self.host_name = details[4]
-		self.host_type = details[8]
+		if len(details) > 2:	
+			self.uuid = details[0]
+			self.name = details[1]
+			self.host_dc_uuid = details[6]
+			self.ip_addr = details[2]
+			self.host_name = details[4]
+			self.host_type = details[8]
 		
 	def isSPM(self, spm_uuid):
 		if spm_uuid == self.get_uuid():

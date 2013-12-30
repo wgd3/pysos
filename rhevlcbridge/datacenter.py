@@ -18,62 +18,59 @@ class DataCenter():
 		'''
 		This constructor assumes it is being passed a comma separated list consisting of all elements in a line from the dat file
 		'''
-		details = []
-		
-		for d in csvList:
-			details.append(d)
-		
-		self.uuid = details[0]
-		self.name = details[2]
-		self.compat = details[8]
-		self.spm_name = details[7]
+		details = csvList
+		if len(details) > 2:
+			self.uuid = details[0]
+			self.name = details[1]
+			self.compat = details[8]
+			self.spm_name = details[7]
 
 	def get_uuid(self):
-		return self.__uuid
+		return self.uuid
 
 
 	def get_name(self):
-		return self.__name
-
+		return self.name
+		
 
 	def get_compat(self):
-		return self.__compat
+		return self.compat
 
 
 	def get_spm_name(self):
-		return self.__spm_name
+		return self.spm_name
 
 
 	def set_uuid(self, value):
-		self.__uuid = value
+		self.uuid = value
 
 
 	def set_name(self, value):
-		self.__name = value
+		self.name = value
 
 
 	def set_compat(self, value):
-		self.__compat = value
+		self.compat = value
 
 
 	def set_spm_name(self, value):
-		self.__spm_name = value
+		self.spm_name = value
 
 
 	def del_uuid(self):
-		del self.__uuid
+		del self.uuid
 
 
 	def del_name(self):
-		del self.__name
+		del self.name
 
 
 	def del_compat(self):
-		del self.__compat
+		del self.compat
 
 
 	def del_spm_name(self):
-		del self.__spm_name
+		del self.spm_name
 
 	uuid = property(get_uuid, set_uuid, del_uuid, "uuid's docstring")
 	name = property(get_name, set_name, del_name, "name's docstring")

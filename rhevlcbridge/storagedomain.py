@@ -18,26 +18,24 @@ class StorageDomain():
 		'''
 		This constructor assumes it is being passed a comma separated list consisting of all elements in a line from the dat file
 		'''
-		details = []
-		
-		for d in csvList:
-			details.append(d)
-		
-		self.uuid = details[0]
-		self.name = details[2]
-		# determine storage medium
-		self.storage_type = details[4]
-		if self.storage_type == "0":
-			self.storage_type = "unknown"
-		elif self.storage_type == "1":
-			self.storage_type = "NFS"
-		elif self.storage_type == "2":
-			self.storage_type = "FCP"
-		elif self.storage_type == "3":
-			self.storage_type = "iSCSI"
-		self.master = False
-		if details[3] == "0":
-			self.master = True					
+		details = csvList
+		#print details
+		if len(details) > 2:
+			self.uuid = details[0]
+			self.name = details[2]
+			# determine storage medium
+			self.storage_type = details[4]
+			if self.storage_type == "0":
+				self.storage_type = "unknown"
+			elif self.storage_type == "1":
+				self.storage_type = "NFS"
+			elif self.storage_type == "2":
+				self.storage_type = "FCP"
+			elif self.storage_type == "3":
+				self.storage_type = "iSCSI"
+			self.master = False
+			if details[3] == "0":
+				self.master = True					
 
 	def get_uuid(self):
 		return self.__uuid
