@@ -505,16 +505,6 @@ def find_sysctl(target, sysctl):
 	return sysctls
 	
 def get_sysctl_info(target):
-	# this is quite possibly the ugliest function ever written in python.
-	# basically, we have a list of 'prints' that this function will parse over
-	# if anything in the 'prints' lists is matched to an item in the overall sysctl
-	# list, it gets printed. The function that does this, iterates over another list
-	# which contains the name of the section, the sysctl list and the prints list.
-	# horribly ineffecient, but the only way *I* could think of to properly iterate over
-	# each section, while being able to print the section header and values without a separate
-	# if clause to print the sysctls for each section.
-	#
-	# I'm so sorry.
 	
 	vm_sysctls = find_sysctl(target, 'vm.')
 	vm_prints = ['dirty', 'hugepage', 'panic', 'overcommit', 'swappiness']
@@ -554,6 +544,25 @@ def get_ip_info(target, local=False):
 		ip_file = mem_file.name
 	else:
 		ip_file = target + 'ip_addr'
+		br_file = target + 'sos_commands/networking/brctl_show'
+	
+	# get bridge associations
+	with open(br_file, 'r') as brfile:
+		bridge_list = list()
+		bridges = {}
+		bridge_output = brfile.read()
+		
+		# KNOWN ISSUE:
+		# With the below regex, if the bridge only has a single interface on it
+		# it will not be captured
+		# For some reason I cannot get this regex to capture anything unless I explicitly
+		# list the tabs as seven '\t' 
+		for bridge_lines in re.findall(r'(?m)^\S.*\n(?:\t\t\t\t\t\t\t.*\n)+', bridge_output):
+			bridge, _ = bridge_lines.split(None, 1)
+			bridges[bridge] = re.findall(r'(?m)\S+$', str(bridge_lines))
+			bridge_list.append(bridge)
+			print bridge_list
+
 	with open(ip_file, 'r') as f:
 	    lines = [line for line in f if line.strip()]
 	    # group by line number
@@ -564,9 +573,14 @@ def get_ip_info(target, local=False):
 	            interface += thing.split()[2:]
 	        if interface:
 				dev = str(key).rstrip(':')
-				interfaces[dev] = interface
+				interfaces[dev] = interface	
 	
 	    for key in interfaces:
+			bridge_member = ''
+			for item in bridge_list:
+				if key in bridges[item]:
+					bridge_member = item
+
 			try:
 				index = interfaces[key].index('mtu')
 				mtu = interfaces[key][index+1]
@@ -588,14 +602,23 @@ def get_ip_info(target, local=False):
 				hwaddr = interfaces[key][index+1]
 			except:
 				hwaddr = ''
-			int_info[key] = ([ipaddr, slaveof, mtu, hwaddr])
+			
+			slaves = list()
+			slaves.append(slaveof)
+			slaves.append(bridge_member)
+			int_info[key] = ([ipaddr, slaves, mtu, hwaddr])
+
+
 
 	print colors.SECTION + colors.BOLD + 'IP ' + colors.ENDC
 	print colors.WHITE + colors.BOLD + '\t {:^15}        {:^20}      {:^11}   {:^12} {:^24}'.format('INT','IP ADDR', 'MEMBER OF','MTU', ' HW ADDR')
 	print '\t' + '=' * 16 + ' ' * 6 + '=' * 23 + ' ' * 4 + '=' * 13 + ' ' * 5 + '=' * 5 + '\t' + '=' * 19 + colors.ENDC
 	for key in sorted(int_info):
+		slavelist = ''
 		value = int_info[key]
 		key = str(key).rstrip(':')
+		for item in value[1]:
+			slavelist = slavelist + item
 		if 'eth' in key or 'em' in key:
 			linecolor = colors.BLUE
 		elif 'vlan' in key:
@@ -606,7 +629,7 @@ def get_ip_info(target, local=False):
 			linecolor = colors.WHITE
 		else:
 			linecolor = colors.PURPLE
-		print '\t' + linecolor + '{:<15s}'.format(key) + '{:^36s}{:<16s}{:<5} \t {:<5}'.format(value[0],value[1],value[2],value[3]) + colors.ENDC
+		print '\t' + linecolor + '{:<15s}'.format(key) + '{:^36s}{:<16s}{:<5} \t {:<5}'.format(value[0],slavelist,value[2],value[3]) + colors.ENDC
 	
 			
 			
