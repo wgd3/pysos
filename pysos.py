@@ -850,7 +850,46 @@ def rhev_eval_db(dbDir):
 		#logging.warning('Found domain_dat: ' + domain_dat)
 		host_dat = dbDir + "/" + findDat(" vds_static ", dbDir + "/restore.sql")
 		#logging.warning('Found host_dat: ' + host_dat)
-		
+                vdc_opt_dat = dbDir + "/" + findDat(" vdc_options ", dbDir + "/restore.sql")
+                #logging.warning('Found options dat: ' + vdc_opt_dat)
+                vds_groups_dat = dbDir + "/" + findDat(" vds_groups ", dbDir + "/restore.sql")
+
+
+                ##########################
+                # Lookup common engine-config values
+                # Should be placed here before tables and formatted however the eval_rhev_mngr function is formatted
+                ##########################
+                
+                opt_list = []
+                theFile = open(vdc_opt_dat,"r")
+                lines = theFile.readlines()
+                
+                raw_opt_list = ["AllowDuplicateMacAddresses",
+                                 "MacPoolRanges",
+                                 "vdsTimeout",
+                                 "SpiceProxyDefualt",
+                                 "FreeSpaceLow"]
+                
+                for l in lines:
+                        for o in raw_opt_list:
+                                if o in l:
+                                        o = o+","+l.split("\t")[2]
+                                        #logging.warning("Found opt config: " + o)
+                                        opt_list.append(o)
+                                        
+                # Print out table of options
+                print colors.HEADER_BOLD
+                print "\t {0:^26} {1:1} {2:^7}".format("Option Name","|","Value")
+                print "\t "+"-"*64+colors.GREEN
+                
+                for o in opt_list:
+                        opt_details = o.split(",")
+                        if len(opt_details) > 1:
+                                print "\t {0:<26} {1:1} {2:<50}".format(opt_details[0],"|",opt_details[1])
+                        else:
+                                print "\t {0:<26} {1:1}".format(opt_details[0],"|")
+                print colors.ENDC
+
 		##
 		# Find all DCs and store in list
 		##
