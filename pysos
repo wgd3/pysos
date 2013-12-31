@@ -1244,6 +1244,11 @@ def get_main(runall, os, mem, kdump, cpu, sysctl, ip, bonding, test, netdev, rhe
 		netdev = True
 		eth = True
 		bios = True
+	if net:
+		ip = True
+		bonding = True
+		eth = True
+		netdev = True
 	if os:
 		get_os_info(target, local)
 	if mem:
@@ -1260,16 +1265,11 @@ def get_main(runall, os, mem, kdump, cpu, sysctl, ip, bonding, test, netdev, rhe
 		get_ip_info(target, local)
 	if bonding:
 		get_bonding_info(target)
-	if netdev:
-		get_netdev_info(target)
 	if rhev:
 		get_rhev_info(target)
 	if eth:
 		get_ethtool_info(target)
-	if net:
-		get_ethtool_info(target)
-		get_bonding_info(target)
-		get_ip_info(target, local)
+	if netdev:
 		get_netdev_info(target)
 				
 			
