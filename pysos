@@ -24,7 +24,8 @@ import os, argparse, textwrap, re, datetime, time, tempfile, subprocess, tarfile
 # switches
 parser = argparse.ArgumentParser(description='Make a sosreport pretty.')
 parser.add_argument('target', metavar='TARGET', nargs='+', help='Target directory for xsos. Defaults to current dir.', default='./')
-parser.add_argument('-o', "--os", action="store_true", help='Prints OS information')		
+parser.add_argument('-o', "--os", action="store_true", help='Prints OS information')
+parser.add_argument('-a', "--all", action="store_true", help='Print all information (RHEV excluded)')		
 parser.add_argument('-m', "--memory", action="store_true", help='Prints memory information')
 parser.add_argument('-k', "--kdump", action="store_true", help="Prints kdump information")
 parser.add_argument('-c', "--cpu", action="store_true", help='Print CPU information ONLY')
@@ -36,7 +37,7 @@ parser.add_argument('-n', "--netdev", action="store_true", help='Print proc/net/
 parser.add_argument('-r', "--rhev", action="store_true", help='Print RHEV Information')
 parser.add_argument('-e', '--ethtool', action="store_true", help='Prints ethtool information')
 parser.add_argument("--net", action="store_true", help='Alias for --ethtool, --bonding, --ip, --netdev')
-
+parser.add_argument('-b', "--bios", action="store_true", help='Show BIOS and dmidecode information')
 
 args = parser.parse_args()
 
@@ -242,7 +243,7 @@ def get_os_info(target, local):
 				boottime = datetime.datetime.fromtimestamp(int(btime)).strftime('%a %b %d %H:%M:%S'\
 				 + colors.WHITE + colors.BOLD + ' UTC ' + colors.ENDC + '%Y')
 			if re.match("^cpu", line):
-				num_cpus = num_cpus + 1
+				num_cpus += 1
 			if re.match("processes", line):
 				num_procs = line.split(" ")[1].rstrip('\n')
 			if re.match("procs_running", line):
@@ -275,7 +276,7 @@ def get_os_info(target, local):
 	print '\t   ' + colors.BLUE + colors.BOLD + 'Booted kernel  : ' + colors.ENDC + str(statuses['kernel']).split(" ")[2]
 	print '\t   ' + colors.BLUE + colors.BOLD + 'GRUB default   : '
 	print '\t   ' + colors.BLUE + colors.BOLD + 'Booted cmdline : ' + colors.ENDC
-	print '%15s' % ' ' + textwrap.fill(statuses['cmdline'], subsequent_indent='%15s' % ' ')
+	print '%15s' % ' ' + textwrap.fill(statuses['cmdline'], 90, subsequent_indent='%15s' % ' ')
 	print '\t   ' + colors.BLUE + colors.BOLD + 'Taint-check    : ' + colors.ENDC + str(tainted)
 	
 	print colors.GREEN + '%9s' % ' ' + colors.BOLD + '~ ' * 20 + colors.ENDC
@@ -455,7 +456,6 @@ def get_kernel_info(target):
 		if item.split()[2] == '0':
 			ctl = ' = 0 ' + '[disabled]' + colors.ENDC
 		elif item.split()[2] == '1':
-			
 			ctl = ' = 1 ' + colors.BOLD + '[enabled]' + colors.ENDC
 		else:
 			ctl = item.split()[2]
@@ -471,7 +471,7 @@ def get_cpu_info(target):
 			for line in cfile:
 				index = line.find(':')
 				if line.startswith('processor'):
-					processors = processors + 1
+					processors += 1
 				if 'model name' in line:
 					cpu_model = line[index+2:len(line)].rstrip('\n')
 				if line.startswith('physical'):
@@ -492,9 +492,114 @@ def get_cpu_info(target):
 		print '\t\t %s cores / %s threads per physical processor' %(core_count, threads)
 		print '\t\t flags : ' + textwrap.fill(cpu_flags, 80, subsequent_indent='%25s' % ' ')
 	else:
-		print 'Error parsing cpuinfo'
+		print 'Error parsing proc/cpuinfo'
+
+
+def get_bios_info(target, local):
+	total_cores = 0
+	total_threads = 0
+	cpus_populated = 0
+	mem_arrays = 0
+	fam_count = 0
+	ver_count = 0
+	total_mem = 0
+	dimm_count = 0
+	empty_dimms = 0
+	if local:
+		temp_file = tempfile.NamedTemporaryFile(delete=False)
+		command = subprocess.Popen(['dmidecode'], stdout=subprocess.PIPE)
+		output = command.stdout.read()
+		for line in output:
+			temp_file.write(line)
+		temp_file.close()
+		dmi_file = temp_file.name
+	else:
+		dmi_file = target + 'dmidecode'
 	
-	
+	if os.path.isfile(dmi_file):
+		with open(dmi_file, 'r') as dfile:
+			# first the main iterables that have distinct leading names
+			for line in dfile:
+				if 'Vendor:' in line:
+					bios_vendor = line.split()[1]
+				if 'Release Date:' in line:
+					bios_date = line.split()[2]
+				if 'Thread Count:' in line:
+					total_threads += int(line.split()[2])
+					thread_count = line.split()[2]
+				if 'Core Count:' in line:
+					total_cores += int(line.split()[2])
+					core_count = line.split()[2]
+				if 'Maximum Capacity:' in line:
+					max_mem = int(line.split()[2])
+				if 'Number Of Devices:' in line:
+					dimm_count += int(line.split()[3])
+				if re.match('\tSize:', line):
+					if 'No Module Installed' in line:
+						empty_dimms += 1
+					else:
+						size = int(line.split()[1])
+						total_mem += size
+				if 'Status: Populated' in line:
+					cpus_populated += 1
+				if 'Current Speed' in line:
+					cpu_freq = line.split()[2]
+				if 'Physical Memory Array' in line:
+					mem_arrays +=  1
+				if 'Product Name:' in line:
+					index = line.find(':')
+					server_type = line[index+1:len(line)].rstrip('\n')
+				if 'UUID:' in line:
+					serv_uuid = line.split()[1]
+			# now, some ugly voodoo to get items that have the same leading header
+				if 'Family:' in line:
+					if fam_count == 0:
+						fam_count += 1
+					else:
+						cpu_family = line.split()[1]
+				if 'Version:' in line and 'Specification Version:' not in line:
+					if ver_count == 0:
+						bios_ver = line.split()[1]
+						ver_count +=  1
+					elif ver_count == 1:
+						sys_ver = line.split()[1]
+						ver_count += 1
+					elif ver_count == 2:
+						chas_ver = line.split()[1]
+						ver_count += 1
+					else:
+						index = line.find(':')
+						cpu_ver = line[index+1:len(line)].strip()
+		mem_max_format = int((max_mem * mem_arrays))
+		if mem_max_format >= 1024:
+			mem_max_format = str((mem_max_format / 1024)) + ' TB'
+		else:
+			mem_max_format = str(mem_max_format) + ' GB'				
+		print colors.SECTION + 'DMI Decode' + colors.ENDC
+		print '\t' + colors.HEADER_BOLD + 'BIOS' + colors.ENDC
+		print '\t\t' + colors.BLUE + 'Vendor  : ' + colors.ENDC + bios_vendor
+		print '\t\t' + colors.BLUE + 'Version : ' + colors.ENDC + bios_ver
+		print '\t\t' + colors.BLUE + 'Release : ' + colors.ENDC + bios_date
+		print '\t' + colors.HEADER_BOLD + 'System' + colors.ENDC
+		print '\t\t' + colors.BLUE + 'Vendor  : ' + colors.ENDC + bios_vendor
+		print '\t\t' + colors.BLUE + 'Server  :' + colors.ENDC + server_type
+		print '\t\t' + colors.BLUE + 'UUID    : ' + colors.ENDC + serv_uuid
+		print '\t' + colors.HEADER_BOLD + 'CPU' + colors.ENDC
+		print '\t\t' + colors.WHITE + '{} CPU sockets populated, {} cores / {} threads per core'.format(cpus_populated, core_count, thread_count) + colors.ENDC
+		print '\t\t' + colors.WHITE + '{} total cores - {} total threads'.format(total_cores, total_threads) + colors.ENDC
+		print '\t\t' + colors.BLUE + 'Family  : ' + colors.ENDC + cpu_family
+		print '\t\t' + colors.BLUE + 'Clock   : ' + colors.ENDC + cpu_freq 
+		print '\t\t' + colors.BLUE + 'Model   : ' + colors.ENDC + cpu_ver
+		print '\t' + colors.HEADER_BOLD + 'Memory' + colors.ENDC
+		print '\t\t' + colors.WHITE + '{} of {} DIMMs populated'.format((dimm_count - empty_dimms), dimm_count) + colors.ENDC
+		print '\t\t' + colors.BLUE + 'Total   : ' + colors.ENDC + str(total_mem) + ' MB' + '  ({} GB)'.format((total_mem / 1024))
+		print '\t\t' + colors.BLUE + 'Max Mem : ' + colors.ENDC + mem_max_format
+		print '\t\t' + colors.GREEN + '{} total memory controllers, {} GB maximum per controller'.format(mem_arrays, max_mem) + colors.ENDC 			
+		
+	else:
+		print colors.SECTION + 'DMI Decode' + colors.ENDC
+		print '\t' + colors.WARN + 'DMIDECODE INFORMATION NOT AVAILABLE' + colors.ENDC		
+				
 def find_sysctl(target, sysctl):
 	sysctls = []
 	if os.path.isfile(target +'sos_commands/kernel/sysctl_-a'):
@@ -556,12 +661,11 @@ def get_ip_info(target, local=False):
 		# With the below regex, if the bridge only has a single interface on it
 		# it will not be captured
 		# For some reason I cannot get this regex to capture anything unless I explicitly
-		# list the tabs as seven '\t' 
+		# list the tabs as seven '\t'
 		for bridge_lines in re.findall(r'(?m)^\S.*\n(?:\t\t\t\t\t\t\t.*\n)+', bridge_output):
 			bridge, _ = bridge_lines.split(None, 1)
 			bridges[bridge] = re.findall(r'(?m)\S+$', str(bridge_lines))
 			bridge_list.append(bridge)
-			print bridge_list
 
 	with open(ip_file, 'r') as f:
 	    lines = [line for line in f if line.strip()]
@@ -1128,11 +1232,24 @@ def findDat(table,restFile):
 	
 	return -1
     
-def get_main(os, mem, kdump, cpu, sysctl, ip, bonding, test, netdev, rhev, eth, net, local, target):
+def get_main(runall, os, mem, kdump, cpu, sysctl, ip, bonding, test, netdev, rhev, eth, net, bios, local, target):
+	if runall:
+		os = True
+		mem = True
+		kdump = True
+		cpu = True
+		sysctl = True
+		ip = True
+		bonding = True
+		netdev = True
+		eth = True
+		bios = True
 	if os:
 		get_os_info(target, local)
 	if mem:
 		get_mem_info(target)
+	if bios:
+		get_bios_info(target, local)
 	if kdump:
 		get_kernel_info(target)
 	if cpu:
@@ -1164,8 +1281,8 @@ else:
 	local = False
 if not target.endswith('/'):
 	target = target + '/'
+	
 
-
-get_main(args.os, args.memory, args.kdump, args.cpu, args.sysctl, args.ip\
-, args.bonding, args.test, args.netdev, args.rhev, args.ethtool, args.net, local, target)
+get_main(args.all, args.os, args.memory, args.kdump, args.cpu, args.sysctl, args.ip\
+, args.bonding, args.test, args.netdev, args.rhev, args.ethtool, args.net, args.bios, local, target)
 
