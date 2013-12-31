@@ -23,6 +23,7 @@ class StorageDomain():
 		if len(details) > 2:
 			self.uuid = details[0]
 			self.name = details[2]
+			#print self.name
 			# determine storage medium
 			self.storage_type = details[4]
 			if self.storage_type == "0":
@@ -38,19 +39,18 @@ class StorageDomain():
 				self.master = True					
 
 	def get_uuid(self):
-		return self.__uuid
+		return self.uuid
 
 
 	def get_name(self):
-		return self.__name
+		return self.name
 
 
 	def get_storage_type(self):
-		return self.__storage_type
-
+		return self.storage_type
 
 	def get_master(self):
-		return self.__master
+		return self.master
 
 
 	def set_uuid(self, value):

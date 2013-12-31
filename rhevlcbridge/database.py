@@ -116,13 +116,15 @@ class Database():
 		'''
 		sd_list = []
 		dat_file = self.dbDir+self.dat_files[1].split(",")[1]
+		#print dat_file
 		openDat = open(dat_file,"r")
 		
 		lines = openDat.readlines()
 		
 		for l in lines:
-			if l.split(",") > 1:
-				newSD = StorageDomain(l.split(","))
+			if len(l.split("\t")) > 1:
+				#print "Line: " + l
+				newSD = StorageDomain(l.split("\t"))
 				sd_list.append(newSD)
 			
 		openDat.close()
@@ -134,13 +136,16 @@ class Database():
 		'''
 		host_list = []
 		dat_file = self.dbDir+self.dat_files[2].split(",")[1]
+		#print dat_file
 		openDat = open(dat_file,"r")
 		
 		lines = openDat.readlines()
 		
 		for l in lines:
-			newHost = Host(l.split(","))
-			host_list.append(newHost)
+			if len(l.split("\t")) > 1:
+				newHost = Host(l.split("\t"))
+				#print "New Host Name: " + newHost.get_name()
+				host_list.append(newHost)
 			
 		openDat.close()
 		return host_list

@@ -820,7 +820,7 @@ def get_rhev_info(target):
 		rhev_eval_db(dbDir)
 		
 	else:
-		print colors.WARN + "Database not found"
+		print colors.WARN + "Database not found" + colors.ENDC
 		
 		# Eval manager even without the database being found
 		print ""
@@ -868,20 +868,15 @@ def rhev_eval_db(dbDir):
 		print colors.HEADER_BOLD + "\t {0:<21} {1:1} {2:^36} {3:1} {4:^12} {5:1} {6:^6}".format("Storage Domain Name","|","UUID","|","Storage Type","|","Master")
 		print "\t "+"-"*85+colors.GREEN
 		for d in sd_list:
-			print d.get_name()
-			#sd_details = d.split(",")
-			print "\t {0:<21} {1:1} {2:^36} {3:1} {4:^12} {5:1} {6:^6}".format(d.get_name()[0],"|",d.get_uuid(),"|",d.get_storage_type(),"|",d.get_master())
+			#print d.get_name()
+			#print d.split(",")
+			print "\t {0:<21} {1:1} {2:^36} {3:1} {4:^12} {5:1} {6:^6}".format(d.get_name(),"|",d.get_uuid(),"|",d.get_storage_type(),"|",d.get_master())
 			
 		print colors.ENDC
 	
-	
-		##
-		# Find all hosts and store in list
-		##
+		####### End of Storage Domain Parsing ######
 		
-		host_list = []
-		theFile = open(host_dat,"r")
-		lines = theFile.readlines()
+		host_list = masterDB.get_hosts()
 		
 		hostDirs = []
 		# look for all files in the parent of the passed 'dbDir', and if it is a dir then attempts to parse
@@ -892,62 +887,38 @@ def rhev_eval_db(dbDir):
 			if os.path.isdir(rootDir+"/"+d):
 				hostDirs.append(d)
 				#print("Appending dir: "+d)
-		
-		for n in lines:
-			vals = n.split("\t")
-			if len(vals) >= 2:
-				#print vals[1] + " - " + vals[0]
-				host_uuid = vals[0]
+									
+		for h in host_list:
+			for d in dc_list:
 				# determine if the host is SPM for a DC
-				if host_uuid == spm_host:
-					host_spm = "*"
-				else:
-					host_spm = ""
-				host_name = vals[1]
-				host_ip = vals[2]
-				host_release = "unknown"
-				
-				# determine host type, 0 = rhel, 2 = rhev-h
-				host_type = vals[8]					
-				if host_type == "0":
-					host_type = "RHEL"
-				elif host_type == "2":
-					host_type = "RHEV-H"
-								
-				# try and find release version
-				hostDirName = host_name.split(".")
-				for h in hostDirs:
-					names = h.split("-")
-					if names[0] == hostDirName[0]:
-						# this is a stupid hack, using '..' in the path name. stop being lazy and find a better alternative
-						releaseFile = open(dbDir+"/../"+h+"/etc/redhat-release")
-						releaseVer = releaseFile.readlines()
-						host_release = releaseVer[0].split("(")[1]
-						# strip the newline character at the end of the line
-						host_release = host_release.replace("\n","")
-						host_release = host_release.rstrip(")")
-						
-				
-				#the below tries to parse host folder names based on the patter: <hostname>_<time_of_sosreport>/
-				
-				#logging.warning(dc_name +","+dc_uuid+","+dc_compat)
-				newHost = host_name+","+host_uuid+","+host_spm+","+host_type+","+host_release
-				#logging.warning("Newest DC is: " + newDC)
-				host_list.append(newHost)
+				if h.get_uuid() == d.get_spm_uuid():
+					h.set_spm_status("*")
 		
-		#Print data center list
-		#headerStr = '%2s '+ colors.BLUE + '%3s %4s %5s %6s' % ("Data Center Name","|","UUID","|","Compatibility Version")
+			# try and find release version
+			hostDirName = h.get_name().split(".")
+			#print hostDirName
+			for dir in hostDirs:
+				names = dir.split("-")
+				if names[0] == hostDirName[0]:
+					# this is a stupid hack, using '..' in the path name. stop being lazy and find a better alternative
+					releaseFile = open(dbDir+"/../"+dir+"/etc/redhat-release")
+					releaseVer = releaseFile.readlines()
+					host_release = releaseVer[0].split("(")[1]
+					# strip the newline character at the end of the line
+					host_release = host_release.replace("\n","")
+					host_release = host_release.rstrip(")")
+					h.set_release_ver(host_release)
+		
 		print colors.HEADER_BOLD + "\t {0:<20} {1:1} {2:^36} {3:1} {4:^6} {5:1} {6:^18} {7:1} {8:^5}".format("Host Name","|","UUID","|","Type","|","Release","|","SPM")
 		print "\t "+"-"*98+colors.GREEN
-		for d in host_list:
-			host_details = d.split(",")
-			print "\t {0:<20} {1:1} {2:^36} {3:1} {4:^6} {5:1} {6:^18} {7:1} {8:^5}".format(host_details[0],"|",host_details[1],"|",host_details[3],"|",host_details[4],"|",host_details[2])
+		for h in host_list:
+			print "\t {0:<20} {1:1} {2:^36} {3:1} {4:^6} {5:1} {6:^18} {7:1} {8:^5}".format(h.get_name(),"|",h.get_uuid(),"|",h.get_host_type(),"|",h.get_release_ver(),"|",h.get_spm_status())
 			
 		print colors.ENDC
 		
 		
 	else:
-		print colors.WARN + "Could not find a database file"
+		print colors.WARN + "Could not find a database file" + colors.ENDC
 		
 # Finds relevant files after dbdump has been extracted
 def findDat(table,restFile):
@@ -969,8 +940,7 @@ def findDat(table,restFile):
 					#logging.warning('Return dat file: ' +datFileName)
 					return datFileName
 	
-	return -1
-    
+
 def get_main(os, mem, kdump, cpu, sysctl, ip, bonding, test, netdev, rhev, eth, target):
 	if os:
 		get_os_info(target)

@@ -15,6 +15,8 @@ class Host():
 	ip_addr = ""
 	host_name = ""
 	host_type = ""
+	spm_status = ""
+	releaseVer = "unknown"
 	
 	def __init__(self, csvList):
 		'''
@@ -29,6 +31,38 @@ class Host():
 			self.ip_addr = details[2]
 			self.host_name = details[4]
 			self.host_type = details[8]
+			# determine host type from input
+			if self.host_type == "0":
+				self.set_host_type("RHEL")
+			elif self.host_type == "2":
+				self.set_host_type("RHEV-H")
+
+	def get_spm_status(self):
+		return self.spm_status
+
+
+	def get_release_ver(self):
+		return self.releaseVer
+
+
+	def set_spm_status(self, value):
+		self.spm_status = value
+
+
+	def set_release_ver(self, value):
+		self.releaseVer = value
+
+
+	def del_spm_status(self):
+		del self.spm_status
+
+
+	def del_release_ver(self):
+		del self.releaseVer
+
+
+				
+	
 		
 	def isSPM(self, spm_uuid):
 		if spm_uuid == self.get_uuid():
@@ -37,82 +71,76 @@ class Host():
 			return False
 
 	def get_host_type(self):
-		return self.__host_type
+		return self.host_type
 
 
 	def set_host_type(self, value):
-		self.__host_type = value
+		self.host_type = value
 
 
 	def del_host_type(self):
-		del self.__host_type
+		del self.host_type
 
 		
 	def get_uuid(self):
-		return self.__uuid
+		return self.uuid
 
 
 	def get_name(self):
-		return self.__name
+		return self.name
 
 
 	def get_host_dc_uuid(self):
-		return self.__host_dc_uuid
+		return self.host_dc_uuid
 
 
 	def get_ip_addr(self):
-		return self.__ip_addr
+		return self.ip_addr
 
 
 	def get_host_name(self):
-		return self.__host_name
+		return self.host_name
 
 
 	def set_uuid(self, value):
-		self.__uuid = value
+		self.uuid = value
 
 
 	def set_name(self, value):
-		self.__name = value
+		self.name = value
 
 
 	def set_host_dc_uuid(self, value):
-		self.__host_dc_uuid = value
+		self.host_dc_uuid = value
 
 
 	def set_ip_addr(self, value):
-		self.__ip_addr = value
+		self.ip_addr = value
 
 
 	def set_host_name(self, value):
-		self.__host_name = value
+		self.host_name = value
 
 
 	def del_uuid(self):
-		del self.__uuid
+		del self.uuid
 
 
 	def del_name(self):
-		del self.__name
+		del self.name
 
 
 	def del_host_dc_uuid(self):
-		del self.__host_dc_uuid
+		del self.host_dc_uuid
 
 
 	def del_ip_addr(self):
-		del self.__ip_addr
+		del self.ip_addr
 
 
 	def del_host_name(self):
-		del self.__host_name
+		del self.host_name
 
-	uuid = property(get_uuid, set_uuid, del_uuid, "uuid's docstring")
-	name = property(get_name, set_name, del_name, "name's docstring")
-	host_dc_uuid = property(get_host_dc_uuid, set_host_dc_uuid, del_host_dc_uuid, "host_dc_uuid's docstring")
-	ip_addr = property(get_ip_addr, set_ip_addr, del_ip_addr, "ip_addr's docstring")
-	host_name = property(get_host_name, set_host_name, del_host_name, "host_name's docstring")
-	host_type = property(get_host_type, set_host_type, del_host_type, "host_type's docstring")
 		
 	
 		

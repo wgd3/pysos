@@ -12,7 +12,7 @@ class DataCenter():
 	uuid = ""
 	name = ""
 	compat = ""
-	spm_name = ""
+	spm_uuid = ""
 	
 	def __init__(self, csvList):
 		'''
@@ -23,7 +23,7 @@ class DataCenter():
 			self.uuid = details[0]
 			self.name = details[1]
 			self.compat = details[8]
-			self.spm_name = details[7]
+			self.spm_uuid = details[7]
 
 	def get_uuid(self):
 		return self.uuid
@@ -37,8 +37,8 @@ class DataCenter():
 		return self.compat
 
 
-	def get_spm_name(self):
-		return self.spm_name
+	def get_spm_uuid(self):
+		return self.spm_uuid
 
 
 	def set_uuid(self, value):
@@ -53,8 +53,8 @@ class DataCenter():
 		self.compat = value
 
 
-	def set_spm_name(self, value):
-		self.spm_name = value
+	def set_spm_uuid(self, value):
+		self.spm_uuid = value
 
 
 	def del_uuid(self):
@@ -69,13 +69,13 @@ class DataCenter():
 		del self.compat
 
 
-	def del_spm_name(self):
-		del self.spm_name
+	def del_spm_uuid(self):
+		del self.spm_uuid
 
 	uuid = property(get_uuid, set_uuid, del_uuid, "uuid's docstring")
 	name = property(get_name, set_name, del_name, "name's docstring")
 	compat = property(get_compat, set_compat, del_compat, "compat's docstring")
-	spm_name = property(get_spm_name, set_spm_name, del_spm_name, "spm_name's docstring")
+	spm_uuid = property(get_spm_uuid, set_spm_uuid, del_spm_uuid, "spm_uuid's docstring")
 						
 
 	
