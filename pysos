@@ -977,7 +977,8 @@ def get_rhev_info(target):
 		elif simpleVer == "3.0":
 			print colors.WARN + "\t Not ready to parse 3.0 databases yet, may not be trustworthy!!"
 		else:
-			print colors.WARN + simpleVer
+			print colors.WARN + "\t Database version could not be found without RPM information."
+			print ""
 		
 		# Move on to the database
 		rhev_eval_db(dbDir)
@@ -1042,9 +1043,13 @@ def rhev_eval_db(dbDir):
 		print '\n'
 	####### End of Storage Domain Parsing ######
 		
-		host_list = masterDB.get_hosts()
+		# Generating clusters for host reference
+		cluster_list = masterDB.get_clusters()
 		
+		host_list = masterDB.get_hosts()
+
 		hostDirs = []
+		hostNameLen = 5
 		# look for all files in the parent of the passed 'dbDir', and if it is a dir then attempts to parse
 		rootDir = os.path.dirname(dbDir)
 		#print "rootDir: " + rootDir
@@ -1059,6 +1064,20 @@ def rhev_eval_db(dbDir):
 			for d in dc_list:
 				if h.get_uuid() == d.get_spm_uuid():
 					h.set_spm_status("*")
+
+			for c in cluster_list:
+				if c.get_uuid() == h.get_host_dc_uuid():
+					#print "winning"
+					for d in dc_list:
+						if c.get_dc_uuid() == d.get_uuid():
+							h.set_host_dc_name(d.get_name())
+							#print "Host DC set"
+					
+			# find length of the host name to auto-format the width of the first column
+			if len(h.get_name()) > hostNameLen:
+				hostNameLen = len(h.get_name())
+				
+				
 			
 			# try and find release version
 			hostDirName = h.get_name().split(".")
@@ -1075,8 +1094,8 @@ def rhev_eval_db(dbDir):
 				host_release = host_release.rstrip(")")
 				h.set_release_ver(host_release)
 		
-		print colors.WHITE + colors.BOLD + "\t  {:<35}\t{:^36}\t {:^6} {:^18} {:^5}".format("Hypervisor","UUID","Type","Release","SPM")
-		print "\t "+ '='* 15 + '\t\t\t' + '=' * 36 + '\t' + '=' * 8 + ' ' * 4 + '=' * 9 + ' ' * 6 + '=' * 5 + colors.ENDC
+		print colors.WHITE + colors.BOLD + "\t  {:<36}\t{:^36}\t{:^11} {:^6} {:^18} {:^5}".format("Hypervisor","UUID","Data Center","Type","Release","SPM")
+		print "\t "+ '='* 15 + '\t\t\t' + '=' * 36 + '\t' + '=' * 11 + ' ' + '=' * 8 + ' ' * 4 + '=' * 9 + ' ' * 6 + '=' * 5 + colors.ENDC
 		
 		for host in host_list:
 			name = host.get_name()
@@ -1090,7 +1109,7 @@ def rhev_eval_db(dbDir):
 			else:
 				spm = ''
 				linecolor = colors.BLUE
-			print linecolor + "\t {:<35}\t{:^36}\t {:^6} {:^18} {:^5}".format(name,host.get_uuid(),host.get_host_type(),host.get_release_ver(),spm) + colors.ENDC
+			print linecolor + "\t {:<35}\t{:^36}\t {:^11} {:^6} {:^18} {:^5}".format(name,host.get_uuid(),host.get_host_dc_name(),host.get_host_type(),host.get_release_ver(),spm) + colors.ENDC
  
 	else:
 		print colors.WARN + "Could not find a database file"
