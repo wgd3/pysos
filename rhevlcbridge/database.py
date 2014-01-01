@@ -5,8 +5,9 @@ Created on Dec 27, 2013
 '''
 import tarfile, os
 from rhevlcbridge.host import Host # Surely there is a better way to do this
-from rhevlcbridge.storagedomain import Cluster
+from rhevlcbridge.storagedomain import StorageDomain
 from rhevlcbridge.datacenter import DataCenter
+from rhevlcbridge.cluster import Cluster
 
 
 class Database():
@@ -140,7 +141,7 @@ class Database():
 		for l in lines:
 			if len(l.split("\t")) > 1:
 				#print "Line: " + l
-				newSD = Cluster(l.split("\t"))
+				newSD = StorageDomain(l.split("\t"))
 				sd_list.append(newSD)
 			
 		openDat.close()
@@ -161,6 +162,8 @@ class Database():
 		for l in lines:
 			if len(l.split("\t")) > 1:
 				newCluster = Cluster(l.split("\t"))
+				#print "New Cluster: " + newCluster.get_dc_uuid()
+				#print "Cluster Name: " + newCluster.get_name()
 				cl_list.append(newCluster)
 				
 		openDat.close()

@@ -23,21 +23,20 @@ class Cluster():
 			self.uuid = details[0]
 			self.name = details[1]
 			self.cpu_type = details[3]
-			self.dc_uuid = details[10]
-			
-	def get_test(self):
-		return self.dc_uuid
+			self.dc_uuid = details[11]
+			#print "We made a cluster!"
+
 
 	def get_dc_uuid(self):
 		return self.dc_uuid
 
 
 	def set_dc_uuid(self, value):
-		self.__dc_uuid = value
+		self.dc_uuid = value
 
 
 	def del_dc_uuid(self):
-		del self.__dc_uuid
+		del self.dc_uuid
 
 
 	def get_uuid(self):

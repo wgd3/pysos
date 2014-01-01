@@ -977,7 +977,8 @@ def get_rhev_info(target):
 		elif simpleVer == "3.0":
 			print colors.WARN + "\t Not ready to parse 3.0 databases yet, may not be trustworthy!!"
 		else:
-			print colors.WARN + simpleVer
+			print colors.WARN + "\t Database version could not be found without RPM information."
+			print ""
 		
 		# Move on to the database
 		rhev_eval_db(dbDir)
@@ -1046,7 +1047,7 @@ def rhev_eval_db(dbDir):
 		cluster_list = masterDB.get_clusters()
 		
 		host_list = masterDB.get_hosts()
-		
+
 		hostDirs = []
 		hostNameLen = 5
 		# look for all files in the parent of the passed 'dbDir', and if it is a dir then attempts to parse
@@ -1064,14 +1065,13 @@ def rhev_eval_db(dbDir):
 				if h.get_uuid() == d.get_spm_uuid():
 					h.set_spm_status("*")
 
-				# Get host's DC name - the "host" class is not aware of any lists of data centers, so it has to be set manually
-				#print "DC UUID: " + d.get_uuid()
-				#print "H UUID: " + h.get_uuid()
-				for c in cluster_list:
-					if c.get_dc_uuid() == h.get_host_dc_uuid():
-						if d.get_uuid() == c.get_dc_uuid():
+			for c in cluster_list:
+				if c.get_uuid() == h.get_host_dc_uuid():
+					#print "winning"
+					for d in dc_list:
+						if c.get_dc_uuid() == d.get_uuid():
 							h.set_host_dc_name(d.get_name())
-					
+							#print "Host DC set"
 					
 			# find length of the host name to auto-format the width of the first column
 			if len(h.get_name()) > hostNameLen:
