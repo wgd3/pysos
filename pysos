@@ -18,6 +18,7 @@
 from __future__ import division
 from itertools import groupby
 from collections import defaultdict
+from rhevlcbridge import *
 import os, argparse, textwrap, re, datetime, time, tempfile, subprocess, tarfile
 
 
@@ -1004,145 +1005,44 @@ def rhev_eval_db(dbDir):
 		dbTar = dbDir + "/sos_pgdump.tar"
 		#logging.warning('Found dbdump: ' + dbTar)
 		
-		#extract tar file
-		dbdump = tarfile.open(dbTar)
-		dbdump.extractall(dbDir+"/")
-		dbdump.close()
+		masterDB = Database(dbTar)
 		
-		# find relevant dat files for DCs, domains, and hosts in the database directory
-		dc_dat = dbDir + "/" + findDat(" storage_pool ", dbDir + "/restore.sql")
-		#logging.warning('Found dc_dat: ' + dc_dat)
-		domain_dat = dbDir + "/" + findDat(" storage_domain_static ", dbDir + "/restore.sql")
-		#logging.warning('Found domain_dat: ' + domain_dat)
-		host_dat = dbDir + "/" + findDat(" vds_static ", dbDir + "/restore.sql")
-		#logging.warning('Found host_dat: ' + host_dat)
-                vdc_opt_dat = dbDir + "/" + findDat(" vdc_options ", dbDir + "/restore.sql")
-                #logging.warning('Found options dat: ' + vdc_opt_dat)
-                vds_groups_dat = dbDir + "/" + findDat(" vds_groups ", dbDir + "/restore.sql")
-
-
-                ##########################
-                # Lookup common engine-config values
-                # Should be placed here before tables and formatted however the eval_rhev_mngr function is formatted
-                ##########################
-                
-                opt_list = []
-                theFile = open(vdc_opt_dat,"r")
-                lines = theFile.readlines()
-                
-                raw_opt_list = ["AllowDuplicateMacAddresses",
-                                 "MacPoolRanges",
-                                 "vdsTimeout",
-                                 "SpiceProxyDefualt",
-                                 "FreeSpaceLow"]
-                
-                for l in lines:
-                        for o in raw_opt_list:
-                                if o in l:
-                                        o = o+","+l.split("\t")[2]
-                                        #logging.warning("Found opt config: " + o)
-                                        opt_list.append(o)
-                                        
-                # Print out table of options
-                print colors.HEADER_BOLD
-                print "\t {0:^26} {1:1} {2:^7}".format("Option Name","|","Value")
-                print "\t "+"-"*64+colors.GREEN
-                
-                for o in opt_list:
-                        opt_details = o.split(",")
-                        if len(opt_details) > 1:
-                                print "\t {0:<26} {1:1} {2:<50}".format(opt_details[0],"|",opt_details[1])
-                        else:
-                                print "\t {0:<26} {1:1}".format(opt_details[0],"|")
-                print colors.ENDC
-
-		
-		##
-		# Find all DCs and store in list
-		##
-		
-		dc_list = []
-		theFile = open(dc_dat,"r")
-		lines = theFile.readlines()
-		
-		for n in lines:
-			vals = n.split("\t")
-			if len(vals) >= 2:
-				dc_uuid = vals[0]
-				dc_name = vals[1]
-				dc_compat = vals[8]
-				spm_host = vals[7]
-					
-				#logging.warning(dc_name +","+dc_uuid+","+dc_compat)
-				newDC = dc_name+","+dc_uuid+","+dc_compat
-				#logging.warning("Newest DC is: " + newDC)
-				
-				dc_list.append(newDC)
+		# create DC list
+		dc_list = masterDB.get_data_centers()
 		
 		#Print data center list
 		#headerStr = '%2s '+ colors.BLUE + '%3s %4s %5s %6s' % ("Data Center Name","|","UUID","|","Compatibility Version")
-		print colors.HEADER_BOLD
-		print "\t {0:<18} {1:1} {2:^36} {3:1} {4:^22}".format("Data Center Name","|","UUID","|","Compatibility Version")
-		print "\t "+"-"*83 + colors.GREEN
+		print colors.WHITE + "\t  {:<25} {:^36} {:^32}".format("Data Center Name","UUID", "Compatibility Version")
+		print "\t "+ '=' * 22 + '\t   ' + '=' * 38 + '    ' + '=' * 23  + colors.ENDC
 	
 		for d in dc_list:
-			dc_details = d.split(",")
-			print "\t {0:<18} {1:1} {2:^36} {3:1} {4:^22}".format(dc_details[0],"|",dc_details[1],"|",dc_details[2])
+			print colors.BLUE + "\t  {:<25} {:^36} {:^32}".format(d.get_name(),d.get_uuid(),d.get_compat()) + colors.ENDC
 			
 		print colors.ENDC
 				
 		####### End of Data Center Parsing #######
-		
-		##
-		# Find all Storage Domains and store in list
-		##
-		
-		sd_list = []
-		theFile = open(domain_dat,"r")
-		lines = theFile.readlines()
-		
-		for n in lines:
-			vals = n.split("\t")
-			if len(vals) >= 2:
-				#print vals[1] + " - " + vals[0]
-				sd_uuid = vals[0]
-				sd_name = vals[2]
-				# sd_type: 0=unknown,1=NFS,2=FCP,3=iSCSI,4=ALL?
-				sd_type = vals[4]
-				if sd_type == "0":
-					sd_type = unknown
-				elif sd_type == "1":
-					sd_type = "NFS"
-				elif sd_type == "2":
-					sd_type = "FCP"
-				elif sd_type == "3":
-					sd_type = "iSCSI"
-				sd_master = ""
-				if vals[3] == "0":
-					sd_master = "*"					
-				#logging.warning(dc_name +","+dc_uuid+","+dc_compat)
-				newSD = sd_name+","+sd_uuid+","+sd_type+","+sd_master
-				#logging.warning("Newest DC is: " + newDC)
-				sd_list.append(newSD)
+
+		sd_list = masterDB.get_storage_domains()
 		
 		#Print data center list
 		#headerStr = '%2s '+ colors.BLUE + '%3s %4s %5s %6s' % ("Data Center Name","|","UUID","|","Compatibility Version")
-		print colors.HEADER_BOLD + "\t {0:<21} {1:1} {2:^36} {3:1} {4:^12} {5:1} {6:^6}".format("Storage Domain Name","|","UUID","|","Storage Type","|","Master")
-		print "\t "+"-"*85+colors.GREEN
+		print colors.WHITE + "\t  {:<25} {:^36}\t {:^9}   {:^10}".format("Storage Domain Name","UUID","Storage Type","Master")
+		print "\t "+ '=' * 22 + '\t   ' + '=' * 38 + '\t' + '=' * 15 + '  ' + '=' * 8 +  colors.ENDC
 		for d in sd_list:
-			sd_details = d.split(",")
-			print "\t {0:<21} {1:1} {2:^36} {3:1} {4:^12} {5:1} {6:^6}".format(sd_details[0],"|",sd_details[1],"|",sd_details[2],"|",sd_details[3])
+			master = d.get_master()
+			if master == 1:
+				master = '*'
+				linecolor = colors.CYAN + colors.BOLD
+			else:
+				master = ''
+				linecolor = colors.CYAN
+			print linecolor + "\t  {:<25} {:^36}\t   {:^10}    {:^10}".format(d.get_name(),d.get_uuid(),d.get_storage_type(),master) + colors.ENDC			
+
 			
-		print colors.ENDC
-	
-	
-		##
-		# Find all hosts and store in list
-		##
+		print '\n'
+	####### End of Storage Domain Parsing ######
 		
-		host_list = []
-		theFile = open(host_dat,"r")
-		lines = theFile.readlines()
+		host_list = masterDB.get_hosts()
 		
 		hostDirs = []
 		# look for all files in the parent of the passed 'dbDir', and if it is a dir then attempts to parse
@@ -1154,59 +1054,44 @@ def rhev_eval_db(dbDir):
 				hostDirs.append(d)
 				#print("Appending dir: "+d)
 		
-		for n in lines:
-			vals = n.split("\t")
-			if len(vals) >= 2:
-				#print vals[1] + " - " + vals[0]
-				host_uuid = vals[0]
-				# determine if the host is SPM for a DC
-				if host_uuid == spm_host:
-					host_spm = "*"
-				else:
-					host_spm = ""
-				host_name = vals[1]
-				host_ip = vals[2]
-				host_release = "unknown"
-				
-				# determine host type, 0 = rhel, 2 = rhev-h
-				host_type = vals[8]					
-				if host_type == "0":
-					host_type = "RHEL"
-				elif host_type == "2":
-					host_type = "RHEV-H"
-								
-				# try and find release version
-				hostDirName = host_name.split(".")
-				for h in hostDirs:
-					names = h.split("-")
-					if names[0] == hostDirName[0]:
-						# this is a stupid hack, using '..' in the path name. stop being lazy and find a better alternative
-						releaseFile = open(dbDir+"/../"+h+"/etc/redhat-release")
-						releaseVer = releaseFile.readlines()
-						host_release = releaseVer[0].split("(")[1]
-						# strip the newline character at the end of the line
-						host_release = host_release.replace("\n","")
-						host_release = host_release.rstrip(")")
-						
-				
-				#the below tries to parse host folder names based on the patter: <hostname>_<time_of_sosreport>/
-				
-				#logging.warning(dc_name +","+dc_uuid+","+dc_compat)
-				newHost = host_name+","+host_uuid+","+host_spm+","+host_type+","+host_release
-				#logging.warning("Newest DC is: " + newDC)
-				host_list.append(newHost)
 		
-		#Print data center list
-		#headerStr = '%2s '+ colors.BLUE + '%3s %4s %5s %6s' % ("Data Center Name","|","UUID","|","Compatibility Version")
-		print colors.HEADER_BOLD + "\t {0:<20} {1:1} {2:^36} {3:1} {4:^6} {5:1} {6:^18} {7:1} {8:^5}".format("Host Name","|","UUID","|","Type","|","Release","|","SPM")
-		print "\t "+"-"*98+colors.GREEN
-		for d in host_list:
-			host_details = d.split(",")
-			print "\t {0:<20} {1:1} {2:^36} {3:1} {4:^6} {5:1} {6:^18} {7:1} {8:^5}".format(host_details[0],"|",host_details[1],"|",host_details[3],"|",host_details[4],"|",host_details[2])
+		for h in host_list:
+			for d in dc_list:
+				if h.get_uuid() == d.get_spm_uuid():
+					h.set_spm_status("*")
 			
-		print colors.ENDC
+			# try and find release version
+			hostDirName = h.get_name().split(".")
+			#print hostDirName
+			for dir in hostDirs:
+				names = dir.split("-")
+			if names[0] == hostDirName[0]:
+				# this is a stupid hack, using '..' in the path name. stop being lazy and find a better alternative
+				releaseFile = open(dbDir+"/../"+dir+"/etc/redhat-release")
+				releaseVer = releaseFile.readlines()
+				host_release = releaseVer[0].split("(")[1]
+				# strip the newline character at the end of the line
+				host_release = host_release.replace("\n","")
+				host_release = host_release.rstrip(")")
+				h.set_release_ver(host_release)
 		
+		print colors.WHITE + colors.BOLD + "\t  {:<35}\t{:^36}\t {:^6} {:^18} {:^5}".format("Hypervisor","UUID","Type","Release","SPM")
+		print "\t "+ '='* 15 + '\t\t\t' + '=' * 36 + '\t' + '=' * 8 + ' ' * 4 + '=' * 9 + ' ' * 6 + '=' * 5 + colors.ENDC
 		
+		for host in host_list:
+			name = host.get_name()
+			if '.com' in name or '.net' in name or '.gov' in name:
+				name = name.replace(' ', '')[:-4]
+			
+			spm = host.get_spm_status()
+			if spm:
+				spm = '*'
+				linecolor = colors.BLUE + colors.BOLD
+			else:
+				spm = ''
+				linecolor = colors.BLUE
+			print linecolor + "\t {:<35}\t{:^36}\t {:^6} {:^18} {:^5}".format(name,host.get_uuid(),host.get_host_type(),host.get_release_ver(),spm) + colors.ENDC
+ 
 	else:
 		print colors.WARN + "Could not find a database file"
 		
@@ -1285,4 +1170,7 @@ if not target.endswith('/'):
 
 get_main(args.all, args.os, args.memory, args.kdump, args.cpu, args.sysctl, args.ip\
 , args.bonding, args.test, args.netdev, args.rhev, args.ethtool, args.net, args.bios, local, target)
+
+
+
 
