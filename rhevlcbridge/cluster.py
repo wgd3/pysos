@@ -19,13 +19,14 @@ class Cluster():
 		This constructor assumes it is being passed a comma separated list consisting of all elements in a line from the dat file
 		'''
 		details = csvList
-		print details
-		#print details
 		if len(details) > 2:
 			self.uuid = details[0]
 			self.name = details[1]
 			self.cpu_type = details[3]
 			self.dc_uuid = details[10]
+			
+	def get_test(self):
+		return self.dc_uuid
 
 	def get_dc_uuid(self):
 		return self.dc_uuid

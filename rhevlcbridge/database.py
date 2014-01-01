@@ -156,7 +156,7 @@ class Database():
 		openDat = open(dat_file,"r")
 		
 		lines = openDat.readlines()
-		print len(lines) 
+		#print len(lines) 
 		
 		for l in lines:
 			if len(l.split("\t")) > 1:
@@ -173,7 +173,7 @@ class Database():
 		'''
 		host_list = []
 		dat_file = self.dbDir+self.dat_files[2].split(",")[1]
-		print dat_file
+		#print dat_file
 		openDat = open(dat_file,"r")
 		
 		lines = openDat.readlines()

@@ -1044,7 +1044,6 @@ def rhev_eval_db(dbDir):
 		
 		# Generating clusters for host reference
 		cluster_list = masterDB.get_clusters()
-		print len(cluster_list)
 		
 		host_list = masterDB.get_hosts()
 		
