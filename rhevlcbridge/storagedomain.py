@@ -4,7 +4,7 @@ Created on Dec 27, 2013
 @author: wallace
 '''
 
-class StorageDomain():
+class Cluster():
 	'''
 	This class will represent hosts in an environment
 	'''

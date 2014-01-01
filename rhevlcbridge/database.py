@@ -5,7 +5,7 @@ Created on Dec 27, 2013
 '''
 import tarfile, os
 from rhevlcbridge.host import Host # Surely there is a better way to do this
-from rhevlcbridge.storagedomain import StorageDomain
+from rhevlcbridge.storagedomain import Cluster
 from rhevlcbridge.datacenter import DataCenter
 
 
@@ -23,6 +23,7 @@ class Database():
 	data_centers = []
 	storage_domains = []
 	hosts = []
+	clusters = []
 
 	def __init__(self, dbFile):
 		'''
@@ -36,6 +37,19 @@ class Database():
 		self.data_centers = self.gatherDataCenters()
 		self.storage_domains = self.gatherStorageDomains()
 		self.hosts = self.gatherHosts()
+		self.clusters = self.gatherClusters()
+
+	def get_clusters(self):
+		return self.clusters
+
+
+	def set_clusters(self, value):
+		self.clusters = value
+
+
+	def del_clusters(self):
+		del self.clusters
+
 
 	def get_data_centers(self):
 		return self.data_centers
@@ -59,7 +73,8 @@ class Database():
 		#print "Setting dat files..."
 		self.dat_files = ["data_center_dat",
 					 "storage_domain_dat",
-					 "host_dat"]
+					 "host_dat",
+					 "cluster_dat"]
 		
 		#print self.dat_files[0]
 		self.dat_files[0] = self.dat_files[0] +","+ self.findDat(" storage_pool ", dbDir+"restore.sql")
@@ -67,7 +82,8 @@ class Database():
 		#print "Passing this to the function: " + self.dat_files[0].split(",")[1]
 		self.dat_files[1] = self.dat_files[1] +","+ self.findDat(" storage_domain_static ", dbDir+"restore.sql")
 		self.dat_files[2] = self.dat_files[2] +","+ self.findDat(" vds_static ", dbDir+"restore.sql")	
-		
+		self.dat_files[3] = self.dat_files[3] +","+self.findDat(" vds_groups ", dbDir+"restore.sql")
+		#print self.dat_files[3]
 		
 	def findDat(self,table,restFile):
 		'''
@@ -124,11 +140,32 @@ class Database():
 		for l in lines:
 			if len(l.split("\t")) > 1:
 				#print "Line: " + l
-				newSD = StorageDomain(l.split("\t"))
+				newSD = Cluster(l.split("\t"))
 				sd_list.append(newSD)
 			
 		openDat.close()
 		return sd_list
+	
+	def gatherClusters(self):
+		'''
+		This method returns a list of comma separated details for clusters
+		'''
+		cl_list = []
+		dat_file = self.dbDir+self.dat_files[3].split(",")[1]
+		
+		openDat = open(dat_file,"r")
+		
+		lines = openDat.readlines()
+		print len(lines) 
+		
+		for l in lines:
+			if len(l.split("\t")) > 1:
+				newCluster = Cluster(l.split("\t"))
+				cl_list.append(newCluster)
+				
+		openDat.close()
+		return cl_list
+		
 	
 	def gatherHosts(self):
 		'''
@@ -136,7 +173,7 @@ class Database():
 		'''
 		host_list = []
 		dat_file = self.dbDir+self.dat_files[2].split(",")[1]
-		#print dat_file
+		print dat_file
 		openDat = open(dat_file,"r")
 		
 		lines = openDat.readlines()
@@ -154,5 +191,6 @@ class Database():
 	data_centers = property(get_data_centers, None, None, None)
 	storage_domains = property(get_storage_domains, None, None, None)
 	hosts = property(get_hosts, None, None, None)
+	clusters = property(get_clusters, set_clusters, del_clusters, "clusters's docstring")
 	
 	
