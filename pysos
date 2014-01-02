@@ -1083,19 +1083,27 @@ def rhev_eval_db(dbDir):
 			hostDirName = h.get_name().split(".")
 			#print hostDirName
 			for dir in hostDirs:
+				#print dir
 				names = dir.split("-")
-			if names[0] == hostDirName[0]:
-				# this is a stupid hack, using '..' in the path name. stop being lazy and find a better alternative
-				releaseFile = open(dbDir+"/../"+dir+"/etc/redhat-release")
-				releaseVer = releaseFile.readlines()
-				host_release = releaseVer[0].split("(")[1]
-				# strip the newline character at the end of the line
-				host_release = host_release.replace("\n","")
-				host_release = host_release.rstrip(")")
-				h.set_release_ver(host_release)
+				#print names[0]
+				#print hostDirName[0]
+				if names[0] == hostDirName[0]:
+					#print "Match!"
+					# this is a stupid hack, using '..' in the path name. stop being lazy and find a better alternative
+					releaseFile = open(dbDir+"/../"+dir+"/etc/redhat-release")
+					releaseVer = releaseFile.readlines()
+					if "Hypervisor" in releaseVer[0]:
+						host_release = releaseVer[0].split("(")[1]
+						# strip the newline character at the end of the line
+						host_release = host_release.replace("\n","")
+						host_release = host_release.rstrip(")")
+						h.set_release_ver(host_release)
+					else:
+						host_release = releaseVer[0].split()[6]
+						h.set_release_ver(host_release)
 		
-		print colors.WHITE + colors.BOLD + "\t  {:<36}\t{:^36}\t{:^11} {:^6} {:^18} {:^5}".format("Hypervisor","UUID","Data Center","Type","Release","SPM")
-		print "\t "+ '='* 15 + '\t\t\t' + '=' * 36 + '\t' + '=' * 11 + ' ' + '=' * 8 + ' ' * 4 + '=' * 9 + ' ' * 6 + '=' * 5 + colors.ENDC
+		print colors.WHITE + colors.BOLD + "\t  {:<28}\t{:^36}\t{:^11} {:^8} {:^18} {:^5}".format("Hypervisor","UUID","Data Center","Type","Release","SPM")
+		print "\t "+ '='* 15 + '\t\t' + '=' * 36 + '\t' + '=' * 11 + ' ' + '=' * 8 + ' ' * 4 + '=' * 9 + ' ' * 6 + '=' * 5 + colors.ENDC
 		
 		for host in host_list:
 			name = host.get_name()
@@ -1109,7 +1117,7 @@ def rhev_eval_db(dbDir):
 			else:
 				spm = ''
 				linecolor = colors.BLUE
-			print linecolor + "\t {:<35}\t{:^36}\t {:^11} {:^6} {:^18} {:^5}".format(name,host.get_uuid(),host.get_host_dc_name(),host.get_host_type(),host.get_release_ver(),spm) + colors.ENDC
+			print linecolor + "\t {:<28}\t{:^36}\t {:^11} {:^6} {:^18} {:^5}".format(name,host.get_uuid(),host.get_host_dc_name(),host.get_host_type(),host.get_release_ver(),spm) + colors.ENDC
  
 	else:
 		print colors.WARN + "Could not find a database file"
