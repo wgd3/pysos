@@ -981,7 +981,7 @@ def get_rhev_info(target):
 			print ""
 		
 		# Find errors first
-		parse_rhevm_logs(target)
+		parse_manager_logs(target)
 		
 		# Move on to the database
 		rhev_eval_db(dbDir)
@@ -990,7 +990,7 @@ def get_rhev_info(target):
 		print colors.WARN + "Database not found"
 		
 		# Find errors first
-		parse_rhevm_logs(target)
+		parse_manager_logs(target)
 		
 		# Eval manager even without the database being found
 		rhev_eval_mngr(target)
@@ -1081,6 +1081,8 @@ def rhev_eval_db(dbDir):
 				if c.get_uuid() == h.get_host_dc_uuid():
 					#print "winning"
 					for d in dc_list:
+						#print c.get_dc_uuid()
+						#print d.get_uuid()
 						if c.get_dc_uuid() == d.get_uuid():
 							h.set_host_dc_name(d.get_name())
 							#print "Host DC set"
@@ -1154,7 +1156,7 @@ def findDat(table,restFile):
 					#logging.warning('Return dat file: ' +datFileName)
 					return datFileName
 	
-def parse_rhevm_logs(target):
+def parse_manager_logs(target):
 	'''
 	The plan here is to grab the most recent errors from engine.log/rhevm.log, messages, server.log(maybe) and present them in a readable fashion
 	
@@ -1176,12 +1178,13 @@ def parse_rhevm_logs(target):
 	except IOError:
 		print colors.WARN + "\t Could not open the engine.log file"
 	
-	try:
-		messages_log = open(target+"var/log/messages")
-		print colors.PURPLE + "\t /var/log/messages: " + colors.GREEN + "loaded"
-		parse_messages_log(messages_log)
-	except IOError:
-		print colors.WARN + "\t Could not open /var/log/messages file"
+	### Holding off on implementing  this for the manager, as we do not often see useful information here
+# 	try:
+# 		messages_log = open(target+"var/log/messages")
+# 		print colors.PURPLE + "\t /var/log/messages: " + colors.GREEN + "loaded"
+# 		parse_messages_log(messages_log)
+# 	except IOError:
+# 		print colors.WARN + "\t Could not open /var/log/messages file"
 		
 def parse_engine_log(logFile):
 	'''
