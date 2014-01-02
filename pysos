@@ -19,7 +19,7 @@ from __future__ import division
 from itertools import groupby
 from collections import defaultdict
 from rhevlcbridge import *
-import os, argparse, textwrap, re, datetime, time, tempfile, subprocess, tarfile
+import os, argparse, textwrap, re, datetime, time, tempfile, subprocess, tarfile, string
 
 
 # switches
@@ -980,22 +980,29 @@ def get_rhev_info(target):
 			print colors.WARN + "\t Database version could not be found without RPM information."
 			print ""
 		
+		# Find errors first
+		parse_rhevm_logs(target)
+		
 		# Move on to the database
 		rhev_eval_db(dbDir)
 		
 	else:
 		print colors.WARN + "Database not found"
 		
+		# Find errors first
+		parse_rhevm_logs(target)
+		
 		# Eval manager even without the database being found
-		print ""
 		rhev_eval_mngr(target)
 	
 	
 # Method for evaulating the manager regardless of whether or not we find the database	
 # This method should expect to receive the original target path, that is, path to sosreport of manager
 def rhev_eval_mngr(target):
-	#logging.warning('rhev_eval_mngr has been called, beginning eval...')
+	#print '\t rhev_eval_mngr has been called, beginning eval...'
 	print ""
+	
+	
 	
 # Method for evaluating the database for env information
 # This method should expect to be passed the directory containing the database
@@ -1010,6 +1017,11 @@ def rhev_eval_db(dbDir):
 		
 		# create DC list
 		dc_list = masterDB.get_data_centers()
+		
+		print ""
+		print colors.SECTION + colors.BOLD + "RHEV Database Information"
+		#print colors.SECTION + colors.BOLD + "--------------------------"
+		print ""
 		
 		#Print data center list
 		#headerStr = '%2s '+ colors.BLUE + '%3s %4s %5s %6s' % ("Data Center Name","|","UUID","|","Compatibility Version")
@@ -1157,6 +1169,7 @@ def parse_rhevm_logs(target):
 	
 	# Gather main log files
 	try:
+		#print colors.WARN + "\t " + target + "/var/log/ovirt-engine/engine.log"
 		engine_log = open(target+"var/log/ovirt-engine/engine.log")
 		print colors.PURPLE + "\t engine.log file: " + colors.GREEN + "loaded"
 		parse_engine_log(engine_log)
@@ -1176,12 +1189,51 @@ def parse_engine_log(logFile):
 	'''
 	
 	# Find most recent error line
-	lines = logFile.readLines()
-	lastLine = len(lines)+1
-	print lastLine
-	errorLine = lines[lastLine]
-	print errorLine
+	lines = logFile.readlines()
+	errorLines = []
+	for line in lines:
+		if "ERROR" in line:
+			#print line
+			errorLines.append(line)
+	lastLine = len(errorLines)-1
+	errorLine = errorLines[lastLine]
+	errorProperties = errorLine.split(" ")
+	'''
+	0 - Date
+	1 - Time
+	3 - Command run
+	7+ - Message
+	'''
+	print colors.PURPLE + "\t Time Stamp: " + colors.GREEN + errorProperties[0] + " " + errorProperties[1]	
+	print colors.PURPLE + "\t Command: " + colors.GREEN + errorProperties[3].lstrip("[").rstrip("]")
 	
+	# Trying to hack this since messages seem to vary in length - basing on last capital letter. deal with it
+	errMessParts =  errorProperties[7:]
+	errorMessage = ""
+	for p in errMessParts:
+		#print p
+		for c in p:
+			if c in "ABCDEFGHIJKLMNOPQRSTUVWXYZ":
+				#print errMessParts.index(p)
+				index = errMessParts.index(p)
+				errorMessage = ' '.join(errMessParts[index:]).replace("\n","")
+				#print errorMessage
+		
+	print colors.PURPLE + "\t Message: " + colors.GREEN  + errorMessage
+
+	singleOccurance = True
+	occurances = 0
+	for line in lines:
+		if ' '.join(errorProperties[7:]) in line:
+			singleOccurance = False
+			occurances = occurances + 1
+	if singleOccurance:
+		print colors.PURPLE + "\t Only occurance of this error: " + colors.GREEN + "Yes"
+	else:
+		print colors.PURPLE + "\t Only occurance of this error: " + colors.GREEN + "No. Errors appears " + str(occurances) + " times in engine.log starting at " + ' '.join(errorLines[0].split(" ")[0:2])
+		
+	print ""
+
 def parse_messages_log(logFile):
 	print ""
 	
