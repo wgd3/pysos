@@ -1116,8 +1116,8 @@ def rhev_eval_db(dbDir):
 						host_release = releaseVer[0].split()[6]
 						h.set_release_ver(host_release)
 		
-		print colors.WHITE + colors.BOLD + "\t  {:<28}\t{:^36}\t{:^11} {:^8} {:^16}  {:^6}".format("Hypervisor","UUID","Data Center","Type","Release","SPM")
-		print "\t "+ '='* 15 + '\t\t' + '=' * 36 + '\t' + '=' * 11 + ' ' + '=' * 8 + ' ' * 4 + '=' * 9 + ' ' * 6 + '=' * 5 + colors.ENDC
+		print colors.WHITE + colors.BOLD + "\t  {:<28}\t{:^36}\t {:^11}\t {:^8} {:^16}  {:^6}".format("Hypervisor","UUID","Data Center","Type","Release","SPM")
+		print "\t "+ '='* 15 + '\t\t' + '=' * 36 + ' ' * 5 + '=' * 11 + ' ' * 5+ '=' * 8 + ' ' * 4 + '=' * 9 + ' ' * 6 + '=' * 5 + colors.ENDC
 		
 		for host in host_list:
 			name = host.get_name()

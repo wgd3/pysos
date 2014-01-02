@@ -24,7 +24,9 @@ class Cluster():
 			self.name = details[1]
 			self.cpu_type = details[3]
 			self.dc_uuid = details[11]
-			if len(self.dc_uuid) != 32:
+			print self.dc_uuid
+			print len(self.dc_uuid)
+			if len(self.dc_uuid) != 36:
 				self.dc_uuid = details[10]
 			#print "We made a cluster!"
 
