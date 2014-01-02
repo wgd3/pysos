@@ -930,8 +930,15 @@ def get_ethi_info(target, device):
 #def getoffset(offset, v1, v2):
 #	return offset + (len(v2) - len(v1))
 
-
 def get_rhev_info(target):
+	# logic to determine hyp/manager
+	
+	if manager:
+		get_rhevm_db_info(target):
+	else:
+		get_rhev_hyp_info(target)
+
+def get_rhevm_db_info(target):
 	# grab / print basic information first
 	print ""
 	print colors.SECTION + colors.BOLD + "RHEV Information"
