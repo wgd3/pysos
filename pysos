@@ -36,6 +36,7 @@ parser.add_argument('-g', "--bonding", action="store_true", help='Print bonding 
 parser.add_argument('-t', "--test", action="store_true")
 parser.add_argument('-n', "--netdev", action="store_true", help='Print proc/net/dev information')
 parser.add_argument('-r', "--rhev", action="store_true", help='Print RHEV Information')
+parser.add_argument("--db", action="store_true", help = 'Print RHEV DB information')
 parser.add_argument('-e', '--ethtool', action="store_true", help='Prints ethtool information')
 parser.add_argument("--net", action="store_true", help='Alias for --ethtool, --bonding, --ip, --netdev')
 parser.add_argument('-b', "--bios", action="store_true", help='Show BIOS and dmidecode information')
@@ -69,7 +70,7 @@ def find_rpm(target, rpm):
 					rpm_state = line.split()[0]
 					return rpm_state
 		if not rpm_state:
-			return colors.WARN + rpm + ' not found' + colors.ENDC
+			return 'not installed'
 	else:
 		return colors.WARN + 'installed rpms file not found!' + colors.ENDC
 		
@@ -930,24 +931,61 @@ def get_ethi_info(target, device):
 #def getoffset(offset, v1, v2):
 #	return offset + (len(v2) - len(v1))
 
-def get_rhev_info(target):
+
+def get_rhev_info(target, check_db):
 	# logic to determine hyp/manager
-	
+	rhevm = find_rpm(target, 'rhevm')
+	if 'not installed' in rhevm:
+		manager = False
+	else:
+		manager = True
 	if manager:
-		get_rhevm_db_info(target):
+		get_rhevm_info(target, check_db)
 	else:
 		get_rhev_hyp_info(target)
 
-def get_rhevm_db_info(target):
+def get_rhev_hyp_info(target):
+	
+		running_vms = 0
+		rhevh_release = get_status(target, 'release')
+		kernel = get_status(target, 'kernel')
+		# Find package versions
+		vdsm = find_rpm(target, 'vdsm')
+		libvirt = find_rpm(target, 'libvirt')
+		spice = find_rpm(target, 'spice-server')
+		qemu_img = find_rpm(target, 'qemu-img-rhev')
+		qemu_kvm = find_rpm(target, 'qemu-kvm-rhev')
+		qemu_tools = find_rpm(target, 'qemu-kvm-rhev-tools')
+		
+		# get number of VMs running on this hypervisor currently
+		with open(target + 'ps', 'r') as psfile:
+			for line in psfile:
+				if '/usr/libexec/qemu-kvm -name' in line:
+					running_vms += 1
+		
+		
+		print colors.SECTION + 'RHEV'
+		print colors.HEADER_BOLD + '\t Release    : ' + colors.ENDC + rhevh_release
+		print colors.HEADER_BOLD + '\t Kernel     : ' + colors.ENDC + kernel.split()[2].rstrip('\n')
+		print ''
+		print colors.HEADER_BOLD + '\t vdsm       : ' + colors.ENDC + vdsm.split('-')[1] + '\t' + \
+		colors.HEADER_BOLD + '\t libvirt    : ' + colors.ENDC + libvirt.split('-')[1]
+		print colors.HEADER_BOLD + '\t SPICE      : ' + colors.ENDC + spice.split('-')[2] + '\t' + \
+		colors.HEADER_BOLD + '\t RHEV tools : ' + colors.ENDC + qemu_tools.split('-')[4]
+		print colors.HEADER_BOLD + '\t qemu-img   : ' + colors.ENDC + qemu_img.split('-')[3] + '\t' + \
+		colors.HEADER_BOLD + '\t qemu-kvm   : ' + colors.ENDC + qemu_kvm.split('-')[3]
+		print '\n'
+		print colors.HEADER_BOLD + '\t Running VMs on this host : ' +colors.ENDC + str(running_vms)
+
+
+def get_rhevm_info(target, check_db):
 	# grab / print basic information first
-	print ""
-	print colors.SECTION + colors.BOLD + "RHEV Information"
-	#print colors.SECTION + colors.BOLD + "----------------"
-	print ""
+	print colors.SECTION + colors.BOLD + "RHEV-M Information"
+	print '\n'
 
 	# Find RHEVM rpm
 	rhevm_ver = find_rpm(target, "rhevm-3")
-	print colors.PURPLE + "\t Version: " + colors.GREEN + rhevm_ver
+	print colors.HEADER_BOLD + "\t Version: " + colors.CYAN+ rhevm_ver + colors.ENDC
 	
 	# Find simplified version for debug purposes
 	if "-3.0" in rhevm_ver:
@@ -957,50 +995,43 @@ def get_rhevm_db_info(target):
 	elif "-3.2" in rhevm_ver:
 		simpleVer = "3.2"
 	else:
-		simpleVer = "Could not be found"
-		
-	#logging.warning('Found the simplified version of rpm: ' + simpleVer) 
+		simpleVer = "Could not be found" 
 	
 	# Try to find database
 	database = False
 	fullPath = os.path.abspath(target)
 	
-	#logging.warning('Using the following as fullpath variable: ' + fullPath)
 	lcRoot = os.path.dirname(fullPath)
 	
-	#logging.warning('Using the following as lcRoot variable: ' + lcRoot)
 	if os.path.isdir(lcRoot + "/database"):
 		database = True
 		dbDir = lcRoot + "/database"
 		
 	# The following is only possible if we found the db above
 	if database:
-		print colors.PURPLE + "\t Database: " + colors.GREEN +"Located"
-		
-		# Compensate for 3.0 / 3.x database differences
-		if simpleVer == "3.1" or simpleVer == "3.2":
-			# Eval manager before moving on to db analysis
-			rhev_eval_mngr(dbDir)
-		elif simpleVer == "3.0":
-			print colors.WARN + "\t Not ready to parse 3.0 databases yet, may not be trustworthy!!"
-		else:
-			print colors.WARN + "\t Database version could not be found without RPM information."
-			print ""
-		
+		print colors.HEADER_BOLD + "\t Database: " + colors.ENDC +"Found. Can give database overview with --db"
+
 		# Find errors first
 		parse_manager_logs(target)
-		
-		# Move on to the database
-		rhev_eval_db(dbDir)
+
+		if check_db:	
+			
+			# Compensate for 3.0 / 3.x database differences
+			if simpleVer == "3.1" or simpleVer == "3.2":
+				# Eval manager before moving on to db analysis
+				rhev_eval_db(dbDir)
+			elif simpleVer == "3.0":
+				print colors.WARN + "\t Not ready to parse 3.0 databases yet, may not be trustworthy!!" + colors.ENDC
+			else:
+				print colors.WARN + "\t Database version could not be found without RPM information." + colors.ENDC
+		else:
+			pass	
 		
 	else:
-		print colors.WARN + "Database not found"
+		print colors.WARN + "Database not found" + colors.ENDC
 		
 		# Find errors first
 		parse_manager_logs(target)
-		
-		# Eval manager even without the database being found
-		rhev_eval_mngr(target)
 	
 	
 # Method for evaulating the manager regardless of whether or not we find the database	
@@ -1014,11 +1045,11 @@ def rhev_eval_mngr(target):
 # Method for evaluating the database for env information
 # This method should expect to be passed the directory containing the database
 def rhev_eval_db(dbDir):
-	#logging.warning('rhev_eval_db has been called, beginning eval...')
+	
 	
 	if os.path.exists(dbDir + "/sos_pgdump.tar"):
 		dbTar = dbDir + "/sos_pgdump.tar"
-		#logging.warning('Found dbdump: ' + dbTar)
+		
 		
 		masterDB = Database(dbTar)
 		
@@ -1026,8 +1057,7 @@ def rhev_eval_db(dbDir):
 		dc_list = masterDB.get_data_centers()
 		
 		print ""
-		print colors.SECTION + colors.BOLD + "RHEV Database Information"
-		#print colors.SECTION + colors.BOLD + "--------------------------"
+		print colors.SECTION + colors.BOLD + "RHEV Database Information" + colors.ENDC
 		print ""
 		
 		#Print data center list
@@ -1123,8 +1153,8 @@ def rhev_eval_db(dbDir):
 						host_release = releaseVer[0].split()[6]
 						h.set_release_ver(host_release)
 		
-		print colors.WHITE + colors.BOLD + "\t  {:<28}\t{:^36}\t {:^11}\t {:^8} {:^16}  {:^6}".format("Hypervisor","UUID","Data Center","Type","Release","SPM")
-		print "\t "+ '='* 15 + '\t\t' + '=' * 36 + ' ' * 5 + '=' * 11 + ' ' * 5+ '=' * 8 + ' ' * 4 + '=' * 9 + ' ' * 6 + '=' * 5 + colors.ENDC
+		print colors.WHITE + colors.BOLD + "\t  {:<36} {:^36}\t {:^11}\t {:^8} {:^14}{:^6}".format("Hypervisor","UUID","Data Center","Type","Release","SPM")
+		print "\t "+ '='* 15 + '\t\t' + ' ' * 6 + '=' * 36 + '\t' + '=' * 13 + ' ' * 4 + '=' * 8 + ' ' * 3 + '=' * 9 + '\t' + '=' * 5 + colors.ENDC
 		
 		for host in host_list:
 			name = host.get_name()
@@ -1138,7 +1168,7 @@ def rhev_eval_db(dbDir):
 			else:
 				spm = ''
 				linecolor = colors.BLUE
-			print linecolor + "\t {:<28}\t{:^36}\t {:^11} {:^6} {:^18} {:^5}".format(name,host.get_uuid(),host.get_host_dc_name(),host.get_host_type(),host.get_release_ver(),spm) + colors.ENDC
+			print linecolor + "\t {:<36} {:^36}\t {:^12}\t  {:^7} {:^13} {:^5}".format(name[:32],host.get_uuid(),str(host.get_host_dc_name())[:13],host.get_host_type(),host.get_release_ver(),spm) + colors.ENDC
  
 	else:
 		print colors.WARN + "Could not find a database file"
@@ -1172,18 +1202,17 @@ def parse_manager_logs(target):
 		
 	# grab / print basic information first
 	print ""
-	print colors.SECTION + colors.BOLD + "RHEV-M Logs"
-	#print colors.SECTION + colors.BOLD + "----------------"
+	print colors.SECTION + colors.BOLD + "Log Files"
 	print ""
 	
 	# Gather main log files
 	try:
 		#print colors.WARN + "\t " + target + "/var/log/ovirt-engine/engine.log"
 		engine_log = open(target+"var/log/ovirt-engine/engine.log")
-		print colors.PURPLE + "\t engine.log file: " + colors.GREEN + "loaded"
+		print colors.WHITE + '\t [engine.log error parsing]' + colors.ENDC
 		parse_engine_log(engine_log)
 	except IOError:
-		print colors.WARN + "\t Could not open the engine.log file"
+		print colors.WARN + "\t Could not open the engine.log file" + colors.ENDC
 	
 	### Holding off on implementing  this for the manager, as we do not often see useful information here
 # 	try:
@@ -1203,9 +1232,9 @@ def parse_engine_log(logFile):
 	errorLines = []
 	for line in lines:
 		if "ERROR" in line:
-			#print line
+
 			errorLines.append(line)
-	print ""
+	print ''
 	
 	for x in range(1,4):
 		lastLine = len(errorLines)-x
@@ -1218,8 +1247,8 @@ def parse_engine_log(logFile):
 		7+ - Message
 		'''
 		
-		print colors.PURPLE + "\t Time Stamp: " + colors.GREEN + errorProperties[0] + " " + errorProperties[1]	
-		print colors.PURPLE + "\t Command: " + colors.GREEN + errorProperties[3].lstrip("[").rstrip("]")
+		print colors.HEADER_BOLD + "\t Time Stamp: " + colors.ENDC + errorProperties[0] + " " + errorProperties[1]	
+		print colors.HEADER_BOLD + "\t Command: " + colors.ENDC + errorProperties[3].lstrip("[").rstrip("]")
 		
 		# Trying to hack this since messages seem to vary in length - basing on last capital letter. deal with it
 		errMessParts =  errorProperties[7:]
@@ -1233,7 +1262,7 @@ def parse_engine_log(logFile):
 					errorMessage = ' '.join(errMessParts[index:]).replace("\n","")
 					#print errorMessage
 			
-		print colors.PURPLE + "\t Message: " + colors.GREEN  + errorMessage
+		print colors.HEADER_BOLD + "\t Message: " + colors.ENDC  + errorMessage
 	
 		singleOccurance = True
 		occurances = 0
@@ -1242,9 +1271,9 @@ def parse_engine_log(logFile):
 				singleOccurance = False
 				occurances = occurances + 1
 		if singleOccurance:
-			print colors.PURPLE + "\t Only occurance of this error: " + colors.GREEN + "Yes"
+			print colors.HEADER_BOLD + "\t Only occurance of this error: " + colors.WHITE + "Yes"
 		else:
-			print colors.PURPLE + "\t Only occurance of this error: " + colors.GREEN + "No. Errors appears " + str(occurances) + " times in engine.log starting at " + ' '.join(errorLines[0].split(" ")[0:2])
+			print colors.HEADER_BOLD + "\t Only occurance of this error: " + colors.ENDC + colors.RED + "No. Errors appear " + str(occurances) + " times in engine.log starting at " + ' '.join(errorLines[0].split(" ")[0:2]) + colors.ENDC
 			
 		print ""
 
@@ -1252,7 +1281,7 @@ def parse_messages_log(logFile):
 	print ""
 	
 
-def get_main(runall, os, mem, kdump, cpu, sysctl, ip, bonding, test, netdev, rhev, eth, net, bios, local, target):
+def get_main(runall, os, mem, kdump, cpu, sysctl, ip, bonding, test, netdev, rhev, db, eth, net, bios, local, target):
 	if runall:
 		os = True
 		mem = True
@@ -1286,7 +1315,8 @@ def get_main(runall, os, mem, kdump, cpu, sysctl, ip, bonding, test, netdev, rhe
 	if bonding:
 		get_bonding_info(target)
 	if rhev:
-		get_rhev_info(target)
+		get_rhev_info(target, db)
+		
 	if eth:
 		get_ethtool_info(target)
 	if netdev:
@@ -1304,7 +1334,7 @@ if not target.endswith('/'):
 	
 
 get_main(args.all, args.os, args.memory, args.kdump, args.cpu, args.sysctl, args.ip\
-, args.bonding, args.test, args.netdev, args.rhev, args.ethtool, args.net, args.bios, local, target)
+, args.bonding, args.test, args.netdev, args.rhev, args.db, args.ethtool, args.net, args.bios, local, target)
 
 
 
