@@ -1195,44 +1195,48 @@ def parse_engine_log(logFile):
 		if "ERROR" in line:
 			#print line
 			errorLines.append(line)
-	lastLine = len(errorLines)-1
-	errorLine = errorLines[lastLine]
-	errorProperties = errorLine.split(" ")
-	'''
-	0 - Date
-	1 - Time
-	3 - Command run
-	7+ - Message
-	'''
-	print colors.PURPLE + "\t Time Stamp: " + colors.GREEN + errorProperties[0] + " " + errorProperties[1]	
-	print colors.PURPLE + "\t Command: " + colors.GREEN + errorProperties[3].lstrip("[").rstrip("]")
-	
-	# Trying to hack this since messages seem to vary in length - basing on last capital letter. deal with it
-	errMessParts =  errorProperties[7:]
-	errorMessage = ""
-	for p in errMessParts:
-		#print p
-		for c in p:
-			if c in "ABCDEFGHIJKLMNOPQRSTUVWXYZ":
-				#print errMessParts.index(p)
-				index = errMessParts.index(p)
-				errorMessage = ' '.join(errMessParts[index:]).replace("\n","")
-				#print errorMessage
-		
-	print colors.PURPLE + "\t Message: " + colors.GREEN  + errorMessage
-
-	singleOccurance = True
-	occurances = 0
-	for line in lines:
-		if ' '.join(errorProperties[7:]) in line:
-			singleOccurance = False
-			occurances = occurances + 1
-	if singleOccurance:
-		print colors.PURPLE + "\t Only occurance of this error: " + colors.GREEN + "Yes"
-	else:
-		print colors.PURPLE + "\t Only occurance of this error: " + colors.GREEN + "No. Errors appears " + str(occurances) + " times in engine.log starting at " + ' '.join(errorLines[0].split(" ")[0:2])
-		
 	print ""
+	
+	for x in range(1,4):
+		lastLine = len(errorLines)-x
+		errorLine = errorLines[lastLine]
+		errorProperties = errorLine.split(" ")
+		'''
+		0 - Date
+		1 - Time
+		3 - Command run
+		7+ - Message
+		'''
+		
+		print colors.PURPLE + "\t Time Stamp: " + colors.GREEN + errorProperties[0] + " " + errorProperties[1]	
+		print colors.PURPLE + "\t Command: " + colors.GREEN + errorProperties[3].lstrip("[").rstrip("]")
+		
+		# Trying to hack this since messages seem to vary in length - basing on last capital letter. deal with it
+		errMessParts =  errorProperties[7:]
+		errorMessage = ""
+		for p in errMessParts:
+			#print p
+			for c in p:
+				if c in "ABCDEFGHIJKLMNOPQRSTUVWXYZ":
+					#print errMessParts.index(p)
+					index = errMessParts.index(p)
+					errorMessage = ' '.join(errMessParts[index:]).replace("\n","")
+					#print errorMessage
+			
+		print colors.PURPLE + "\t Message: " + colors.GREEN  + errorMessage
+	
+		singleOccurance = True
+		occurances = 0
+		for line in lines:
+			if ' '.join(errorProperties[7:]) in line:
+				singleOccurance = False
+				occurances = occurances + 1
+		if singleOccurance:
+			print colors.PURPLE + "\t Only occurance of this error: " + colors.GREEN + "Yes"
+		else:
+			print colors.PURPLE + "\t Only occurance of this error: " + colors.GREEN + "No. Errors appears " + str(occurances) + " times in engine.log starting at " + ' '.join(errorLines[0].split(" ")[0:2])
+			
+		print ""
 
 def parse_messages_log(logFile):
 	print ""
