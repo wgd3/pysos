@@ -37,7 +37,7 @@ class Host():
 				self.set_host_type("RHEL")
 			elif self.host_type == "2":
 				self.set_host_type("RHEV-H")
-			self.host_dc_name = 'test'	
+			self.host_dc_name = 'unknown'	
 				
 	def get_host_dc_name(self):
 		return self.host_dc_name
