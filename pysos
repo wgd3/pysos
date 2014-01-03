@@ -19,7 +19,7 @@ from __future__ import division
 from itertools import groupby
 from collections import defaultdict
 from rhevlcbridge import *
-import os, argparse, textwrap, re, datetime, time, tempfile, subprocess, tarfile, string
+import os, argparse, textwrap, re, datetime, time, math, tempfile, subprocess, tarfile, string
 
 
 # switches
@@ -54,6 +54,7 @@ class colors:
     ENDC = '\033[0m'
     BOLD = '\033[1m'
     WHITE = '\033[1;37m'
+    GREY = '\033[37m'
     HEADER_BOLD = '\033[95m' + '\033[1m'
     WARN = '\033[33m'
     PURPLE = '\033[35m'
@@ -211,11 +212,12 @@ def sel_check(target):
 def get_loadavg(target, cpus, local):
 	
 	if local:
-		mem_file = tempfile.NamedTemporaryFile()
+		mem_file = tempfile.NamedTemporaryFile(delete=False)
 		command = subprocess.Popen('uptime', stdout=subprocess.PIPE)
 		output = command.stdout.read()
 		for line in output:
 			mem_file.write(line)
+		mem_file.close()
 		load_file = mem_file.name
 	else:
 		load_file = target + 'uptime'
@@ -233,7 +235,10 @@ def get_loadavg(target, cpus, local):
 		loads[index] = (loads[index] + colors.DBLUE + '(%.2f%%)' + colors.ENDC) %loadperc
 	return str(loads[0] + loads[1] + loads[2])
 	
-		
+	try:
+		os.remove(mem_file.name)
+	except:
+		pass	
 def graphit(perc):
 	
 	# general graphing function, needs to be fed a percentage. 
@@ -932,7 +937,7 @@ def get_bonding_info(target):
 			try: 
 				if value[2][dev_count]:
 					print '  {:>87}{:>20}'.format(value[2][dev_count], value[3][dev_count])
-					dev_count = dev_count + 1
+					dev_count += 1
 			except:
 				print colors.PURPLE + '\t' * 10 + '   ' + '- ' * 10 + colors.ENDC
 
@@ -1022,9 +1027,6 @@ def get_ethi_info(target, device):
 					except:
 						firmware_ver = 'unknown'
 	return driver, drv_ver, firmware_ver							
-	
-#def getoffset(offset, v1, v2):
-#	return offset + (len(v2) - len(v1))
 
 
 def get_rhev_info(target, check_db):
@@ -1054,10 +1056,13 @@ def get_rhev_hyp_info(target):
 		
 		# get number of VMs running on this hypervisor currently
 		with open(target + 'ps', 'r') as psfile:
+			vm_list = []
 			for line in psfile:
 				if '/usr/libexec/qemu-kvm -name' in line:
 					running_vms += 1
-		
+					index = line.find('-name')
+					index2 = line.find("-S -M")
+					vm_list.append(str(line[index+6:index2]).strip())
 		
 		print colors.SECTION + 'RHEV'
 		print colors.HEADER_BOLD + '\t Release    : ' + colors.ENDC + rhevh_release
@@ -1071,6 +1076,20 @@ def get_rhev_hyp_info(target):
 		colors.HEADER_BOLD + '\t qemu-kvm   : ' + colors.ENDC + qemu_kvm.split('-')[3]
 		print '\n'
 		print colors.HEADER_BOLD + '\t Running VMs on this host : ' +colors.ENDC + str(running_vms)
+		vm_list.sort()
+		rows = math.ceil(len(vm_list) / 5)
+		for number in range(0, int(rows)):
+			to_print = []
+			for i in range(0, 5):
+				try:
+					to_print.append(vm_list[4-i])
+					
+					vm_list.remove(vm_list[4-i])
+				except:
+					to_print.append('')
+						
+			print colors.GREEN + '\t\t' + '{:15} {:15} {:15} {:15} {:15}'.format(to_print[4][:15], to_print[3][:15], to_print[2][:15], to_print[1][:15], to_print[0][:15]) + colors.ENDC	
+	
 
 
 def get_rhevm_info(target, check_db):
@@ -1365,7 +1384,7 @@ def parse_engine_log(logFile):
 		for line in lines:
 			if ' '.join(errorProperties[7:]) in line:
 				singleOccurance = False
-				occurances = occurances + 1
+				occurances += 1
 		if singleOccurance:
 			print colors.HEADER_BOLD + "\t Only occurance of this error: " + colors.WHITE + "Yes"
 		else:
@@ -1411,15 +1430,15 @@ def get_main(runall, os, mem, kdump, cpu, sysctl, ip, bonding, test, netdev, rhe
 		get_ip_info(target, local)
 	if bonding:
 		get_bonding_info(target)
-	if rhev:
-		get_rhev_info(target, db)
-		
 	if eth:
 		get_ethtool_info(target)
 	if netdev:
 		get_netdev_info(target)
 	if lspci:
 		get_lspci_info(target, local)
+	if rhev:
+		get_rhev_info(target, db)
+		
 				
 			
 			
