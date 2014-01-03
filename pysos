@@ -40,7 +40,7 @@ parser.add_argument("--db", action="store_true", help = 'Print RHEV DB informati
 parser.add_argument('-e', '--ethtool', action="store_true", help='Prints ethtool information')
 parser.add_argument("--net", action="store_true", help='Alias for --ethtool, --bonding, --ip, --netdev')
 parser.add_argument('-b', "--bios", action="store_true", help='Show BIOS and dmidecode information')
-
+parser.add_argument('-l', "--lspci", action="store_true", help='Show lspci information')
 args = parser.parse_args()
 
 # Define colors - yay color!
@@ -60,11 +60,24 @@ class colors:
     CYAN = '\033[36m'
     DBLUE = '\033[34m'
     
-def find_rpm(target, rpm):
+def find_rpm(target, rpm, local=False):
 	# from here we will pull specific targets for installed RPMS
 	rpm_state = False
-	if os.path.isfile(target + 'installed-rpms'):
-		with open(target + 'installed-rpms', 'r') as rpmfile:
+	if local:
+		temp_file = tempfile.NamedTemporaryFile(delete=False)
+		command = subprocess.Popen(['rpm', '-qa'], stdout=subprocess.PIPE)
+		output = command.stdout.read()
+		for line in output:
+			temp_file.write(line)
+		temp_file.close()
+		rpm_file = temp_file.name
+
+		
+	else:
+		rpm_file = target + 'installed-rpms'
+			
+	if os.path.isfile(rpm_file):
+		with open(rpm_file, 'r') as rpmfile:
 			for line in rpmfile:
 				if rpm in line:
 					rpm_state = line.split()[0]
@@ -73,7 +86,11 @@ def find_rpm(target, rpm):
 			return 'not installed'
 	else:
 		return colors.WARN + 'installed rpms file not found!' + colors.ENDC
-		
+	
+	try:
+		os.remove(temp_file.name)
+	except:
+		pass		
 def find_chkconfig(target, service):
 	
 	# search for specific config states for a given service
@@ -194,12 +211,11 @@ def sel_check(target):
 def get_loadavg(target, cpus, local):
 	
 	if local:
-		mem_file = tempfile.NamedTemporaryFile(delete=False)
+		mem_file = tempfile.NamedTemporaryFile()
 		command = subprocess.Popen('uptime', stdout=subprocess.PIPE)
 		output = command.stdout.read()
 		for line in output:
 			mem_file.write(line)
-		mem_file.close()
 		load_file = mem_file.name
 	else:
 		load_file = target + 'uptime'
@@ -392,10 +408,10 @@ def check_initrd(target):
 				return initrd
 	return initrd
 	
-def get_kernel_info(target):
+def get_kernel_info(target, local):
 	
 	# get kexec version, service enablement, initrd.img, kdump path
-	kexec_ver = find_rpm(target, 'kexec-tools')
+	kexec_ver = find_rpm(target, 'kexec-tools', local)
 	kdump_status = find_chkconfig(target, 'kdump')
 	initrd = check_initrd(target)
 	
@@ -507,6 +523,8 @@ def get_bios_info(target, local):
 	total_mem = 0
 	dimm_count = 0
 	empty_dimms = 0
+	core_count = 0
+	thread_count = 0
 	if local:
 		temp_file = tempfile.NamedTemporaryFile(delete=False)
 		command = subprocess.Popen(['dmidecode'], stdout=subprocess.PIPE)
@@ -600,7 +618,12 @@ def get_bios_info(target, local):
 		
 	else:
 		print colors.SECTION + 'DMI Decode' + colors.ENDC
-		print '\t' + colors.WARN + 'DMIDECODE INFORMATION NOT AVAILABLE' + colors.ENDC		
+		print '\t' + colors.WARN + 'DMIDECODE INFORMATION NOT AVAILABLE' + colors.ENDC
+	
+	try:
+		os.remove(temp_file.name)
+	except:
+		pass	
 				
 def find_sysctl(target, sysctl):
 	sysctls = []
@@ -637,6 +660,71 @@ def get_sysctl_info(target):
 					index = item.find('=')
 					print colors.BLUE + colors.BOLD + '\t %33s' %item[indexname+1:index-1] + colors.ENDC + ' = ' + item[index+1:len(item)]
 
+
+def get_lspci_info(target, local):
+	devices = defaultdict(list)
+	counter = 0
+	if local:
+		temp_file = tempfile.NamedTemporaryFile(delete=False)
+		command = subprocess.Popen(['lspci'], stdout=subprocess.PIPE)
+		output = command.stdout.read()
+		for line in output:
+			temp_file.write(line)
+		temp_file.close()
+		lspci_file = temp_file.name
+	else:
+		lspci_file = target + 'lspci'
+		
+	if os.path.isfile(lspci_file):
+		with open(lspci_file, 'r') as lfile:
+			for line in lfile:
+				line = line.strip('\n')
+				# stop once we go beyond the basic output
+				if 'lspci -nvv:' in line:
+					break
+				if 'lspci:' not in line:
+					# don't include the base chipset
+					if '00:01' not in line:
+						try:
+							pci_addr = line.split()[0]
+							index = pci_addr.find('.')
+							pci_addr = pci_addr[0:index]
+							index = line.find(': ')
+							dev = line[index+1:len(line)]
+							index2 = line.find('.')
+							controller = line[index2+2:index]
+							if devices.has_key(pci_addr):
+								counter += 1
+								dev_list = [controller, dev, counter]
+								devices[pci_addr] = dev_list
+							else:
+								counter = 1
+								dev_list = [controller, dev, counter]
+								devices[pci_addr] = dev_list	
+						except:
+							pass
+					else:
+						pass
+				else:
+					pass
+	try:
+		os.remove(temp_file.name)
+	except:
+		pass
+		
+	print colors.SECTION + 'LSPCI' + colors.ENDC
+	print ''
+	print colors.HEADER_BOLD + '\t Physical Devices' + colors.ENDC
+	linecolor = colors.BLUE + '\t\t'
+	for item in sorted(devices):
+		value = devices[item]
+		# only display hardware devices we care about. Can expand this as we need to
+		show_these = ['VGA', 'Ethernet', 'Network', 'Realtek', 'SCSI']
+		for item in show_these:
+			if item in value[0]:
+				print linecolor +  '{:<10} '.format(value[0].split()[0]) + colors.WHITE + '{:^1} ports '.format(value[2]) + colors.ENDC + value[1]
+
+
 def get_ip_info(target, local=False):
 	interfaces = {}
 	int_info = defaultdict(list)
@@ -647,8 +735,15 @@ def get_ip_info(target, local=False):
 		for line in output:
 			mem_file.write(line)
 		mem_file.close()
-		print mem_file.name
 		ip_file = mem_file.name
+		
+		temp_file = tempfile.NamedTemporaryFile(delete=False)
+		command = subprocess.Popen(['brctl', 'show'], stdout=subprocess.PIPE)
+		output = command.stdout.read()
+		for line in output:
+			temp_file.write(line)
+		temp_file.close()
+		br_file = temp_file.name
 	else:
 		ip_file = target + 'ip_addr'
 		br_file = target + 'sos_commands/networking/brctl_show'
@@ -1281,7 +1376,8 @@ def parse_messages_log(logFile):
 	print ""
 	
 
-def get_main(runall, os, mem, kdump, cpu, sysctl, ip, bonding, test, netdev, rhev, db, eth, net, bios, local, target):
+def get_main(runall, os, mem, kdump, cpu, sysctl, ip, bonding, test, netdev, rhev, db, eth, net, bios, lspci,\
+ local, target):
 	if runall:
 		os = True
 		mem = True
@@ -1305,7 +1401,7 @@ def get_main(runall, os, mem, kdump, cpu, sysctl, ip, bonding, test, netdev, rhe
 	if bios:
 		get_bios_info(target, local)
 	if kdump:
-		get_kernel_info(target)
+		get_kernel_info(target, local)
 	if cpu:
 		get_cpu_info(target)
 	if sysctl:
@@ -1321,6 +1417,8 @@ def get_main(runall, os, mem, kdump, cpu, sysctl, ip, bonding, test, netdev, rhe
 		get_ethtool_info(target)
 	if netdev:
 		get_netdev_info(target)
+	if lspci:
+		get_lspci_info(target, local)
 				
 			
 			
@@ -1334,7 +1432,7 @@ if not target.endswith('/'):
 	
 
 get_main(args.all, args.os, args.memory, args.kdump, args.cpu, args.sysctl, args.ip\
-, args.bonding, args.test, args.netdev, args.rhev, args.db, args.ethtool, args.net, args.bios, local, target)
+, args.bonding, args.test, args.netdev, args.rhev, args.db, args.ethtool, args.net, args.bios, args.lspci, local, target)
 
 
 
