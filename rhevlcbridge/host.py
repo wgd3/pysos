@@ -12,7 +12,6 @@ class Host():
 	uuid = ""
 	name = ""
 	host_dc_uuid = ""
-	host_dc_name = "unknown"
 	ip_addr = ""
 	host_name = ""
 	host_type = ""
@@ -37,19 +36,6 @@ class Host():
 				self.set_host_type("RHEL")
 			elif self.host_type == "2":
 				self.set_host_type("RHEV-H")
-			self.host_dc_name = 'unknown'	
-				
-	def get_host_dc_name(self):
-		return self.host_dc_name
-
-
-	def set_host_dc_name(self, value):
-		self.host_dc_name = value
-
-
-	def del_host_dc_name(self):
-		del self.host_dc_name
-
 
 	def get_spm_status(self):
 		return self.spm_status
@@ -154,7 +140,6 @@ class Host():
 
 	def del_host_name(self):
 		del self.host_name
-	host_dc_name = property(get_host_dc_name, set_host_dc_name, del_host_dc_name, "host_dc_name's docstring")
 
 		
 	
