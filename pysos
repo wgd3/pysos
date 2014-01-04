@@ -41,7 +41,6 @@ parser.add_argument('-e', '--ethtool', action="store_true", help='Prints ethtool
 parser.add_argument("--net", action="store_true", help='Alias for --ethtool, --bonding, --ip, --netdev')
 parser.add_argument('-b', "--bios", action="store_true", help='Show BIOS and dmidecode information')
 parser.add_argument('-l', "--lspci", action="store_true", help='Show lspci information')
-parser.add_argument('-d', "--disk", action="store_true", help='Show /proc/partition information')
 args = parser.parse_args()
 
 # Define colors - yay color!
@@ -67,7 +66,7 @@ def find_rpm(target, rpm, local=False):
 	rpm_state = False
 	if local:
 		temp_file = tempfile.NamedTemporaryFile(delete=False)
-		command = subprocess.Popen(['rpm', '-qa', rpm], stdout=subprocess.PIPE)
+		command = subprocess.Popen(['rpm', '-qa'], stdout=subprocess.PIPE)
 		output = command.stdout.read()
 		for line in output:
 			temp_file.write(line)
@@ -253,7 +252,6 @@ def graphit(perc):
 	
 def get_os_info(target, local): 
 	
-	statuses = get_status(target, 'all', local)
 	rhnserver = get_rhn(target, local)
 	tainted = taint_check(target)		
 	selstate = sel_check(target)
@@ -277,10 +275,10 @@ def get_os_info(target, local):
 	
 
 	loadavg = get_loadavg(target, num_cpus, local)	
-				
+	sys = get_status(target, 'date')
+	print sys  			
 	# from sys time and boot time calc uptime rather than butcher the uptime string more
-	if boottime and btime and ('not found' not in statuses['date']):
-		sys = statuses['date']           # Python strptime only works for timezone the 
+	if boottime and btime and ('not found' not in sys): # Python strptime only works for timezone the 
 		index = sys.find(sys.split()[-2])	# local computer is set to, so we need to strip the TZ
 		systime = str(sys[0:index] + sys[index+3:len(sys)])
 		systimesec = time.mktime(datetime.datetime.strptime(systime, "%a %b  %d %H:%M:%S %Y").timetuple())		
@@ -290,22 +288,22 @@ def get_os_info(target, local):
 
 	# Print it all pretty like.
 	print colors.SECTION + colors.BOLD + "OS " + colors.ENDC
-	print colors.HEADER_BOLD + '\t Hostname  : ' + colors.ENDC + statuses['hostname']
-	print colors.HEADER_BOLD +  '\t Release   : ' + colors.ENDC + statuses['release']
+	print colors.HEADER_BOLD + '\t Hostname  : ' + colors.ENDC + get_status(target, 'hostname')
+	print colors.HEADER_BOLD +  '\t Release   : ' + colors.ENDC + get_status(target, 'release')
 	print colors.HEADER_BOLD + '\t RHN Info  : ' + colors.ENDC + rhnserver
-	print colors.HEADER_BOLD + '\t Runlevel  : ' + colors.ENDC + statuses['runlevel']
+	print colors.HEADER_BOLD + '\t Runlevel  : ' + colors.ENDC + get_status(target, 'runlevel')
 	print colors.HEADER_BOLD +  '\t SELinux   : ' + colors.ENDC + selstate
 	
 	print colors.HEADER_BOLD + '\t Kernel    : ' + colors.ENDC
-	print '\t   ' + colors.BLUE + colors.BOLD + 'Booted kernel  : ' + colors.ENDC + str(statuses['kernel']).split(" ")[2]
+	print '\t   ' + colors.BLUE + colors.BOLD + 'Booted kernel  : ' + colors.ENDC + str(get_status(target, 'kernel')).split(" ")[2]
 	print '\t   ' + colors.BLUE + colors.BOLD + 'GRUB default   : '
 	print '\t   ' + colors.BLUE + colors.BOLD + 'Booted cmdline : ' + colors.ENDC
-	print '%15s' % ' ' + textwrap.fill(statuses['cmdline'], 90, subsequent_indent='%15s' % ' ')
+	print '%15s' % ' ' + textwrap.fill(get_status(target, 'cmdline'), 90, subsequent_indent='%15s' % ' ')
 	print '\t   ' + colors.BLUE + colors.BOLD + 'Taint-check    : ' + colors.ENDC + str(tainted)
 	
 	print colors.GREEN + '%9s' % ' ' + colors.BOLD + '~ ' * 20 + colors.ENDC
 	
-	print colors.HEADER_BOLD  + '\t Sys time  : ' + colors.ENDC + statuses['date']
+	print colors.HEADER_BOLD  + '\t Sys time  : ' + colors.ENDC + sys
 	print colors.HEADER_BOLD  + '\t Boot time : ' + colors.ENDC + boottime
 	print colors.HEADER_BOLD + '\t Uptime    : ' + colors.ENDC + uptime
 	print colors.HEADER_BOLD + '\t Load Avg  : ' + colors.WHITE +'[%s CPUs] ' %(num_cpus) + colors.ENDC \
@@ -1030,50 +1028,6 @@ def get_ethi_info(target, device):
 	return driver, drv_ver, firmware_ver							
 
 
-def get_storage_info(target, local):
-	disks = defaultdict(list)
-	total_space = 0
-	num_disks = 0
-	if local:
-		pass
-	else:
-		disk_file = target + 'proc/partitions'
-		
-	with open(disk_file, 'r') as dfile:
-		for line in dfile:
-			if 'emc' not in line:
-				if re.match('^ \d*', line):
-					dev = str(line.split()[3]).strip()
-					# check if dev ends in a number, meaning this would be a partition 
-					if not re.search(r'\d+$', dev):	
-						disks[dev] = round(((int(line.split()[2])) / 1048576), 0)
-						total_space += round(((int(line.split()[2])) / 1048576), 0)
-						num_disks += 1
-						
-					else:
-						# cciss devices would all get called partitions in the above. Here we handle them explicitly
-						if 'cciss' in dev:
-							# cciss partitions format as cxdxpx
-							if 'p' in dev:
-								pass
-							else:
-								disks[dev] = round(((int(line.split()[2])) / 1048576), 0)
-								total_space += round(((int(line.split()[2])) / 1048576), 0)
-								num_disks += 1
-	
-						else:
-							pass
-		
-	
-	print colors.SECTION + colors.BOLD + 'Storage' + colors.ENDC
-	print colors.HEADER_BOLD + '\t Whole disks on system :  ' + colors.ENDC + str(num_disks)
-	print colors.GREEN + '\t Total amount of storage on system : ' + colors.ENDC + str(total_space) + ' GB' + '  ( %2.2f TB)' %((total_space / 1024))
-	print colors.WHITE + '\t {:^25}  {:^10}'.format('Disk', 'Size in GB') 
-	print '\t\t' + '=' * 11 + '\t ' + '=' * 15 + colors.ENDC
-	for item in sorted(disks):
-		print '\t\t{:14}  {:>15}'.format(item, disks[item])
-			
-					
 def get_rhev_info(target, check_db):
 	# logic to determine hyp/manager
 	rhevm = find_rpm(target, 'rhevm')
@@ -1442,7 +1396,7 @@ def parse_messages_log(logFile):
 	
 
 def get_main(runall, os, mem, kdump, cpu, sysctl, ip, bonding, test, netdev, rhev, db, eth, net, bios, lspci,\
- disk, local, target):
+ local, target):
 	if runall:
 		os = True
 		mem = True
@@ -1483,8 +1437,6 @@ def get_main(runall, os, mem, kdump, cpu, sysctl, ip, bonding, test, netdev, rhe
 		get_lspci_info(target, local)
 	if rhev:
 		get_rhev_info(target, db)
-	if disk:
-		get_storage_info(target, local)
 		
 				
 			
@@ -1499,7 +1451,7 @@ if not target.endswith('/'):
 	
 
 get_main(args.all, args.os, args.memory, args.kdump, args.cpu, args.sysctl, args.ip\
-, args.bonding, args.test, args.netdev, args.rhev, args.db, args.ethtool, args.net, args.bios, args.lspci, args.disk, local, target)
+, args.bonding, args.test, args.netdev, args.rhev, args.db, args.ethtool, args.net, args.bios, args.lspci, local, target)
 
 
 
