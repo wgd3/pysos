@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 # 
-# xsos for BASH originally written by Ryan Sawhill <rsaw@redhat.com>
+# 
 # pysos written by Jake Hunsaker <jhunsaker@redhat.com>
-# RHEV module written by Wallace Daniel
+# rhevlcbridge library  and get_rhevm_info() written by Wallace Daniel
 #
 #
 #    This program is free software: you can redistribute it and/or modify
@@ -24,24 +24,28 @@ import os, argparse, textwrap, re, datetime, time, math, tempfile, subprocess, t
 
 # switches
 parser = argparse.ArgumentParser(description='Make a sosreport pretty.')
-parser.add_argument('target', metavar='TARGET', nargs='+', help='Target directory for xsos. Defaults to current dir.', default='./')
+parser.add_argument('target', nargs='+', help='Target directory, aka the sosreport root. Use "/" to run locally')
+parser.add_argument('-a', "--all", action="store_true", help='Print all information (RHEV excluded)')
+parser.add_argument('-b', "--bios", action="store_true", help='Print BIOS and dmidecode information')
 parser.add_argument('-o', "--os", action="store_true", help='Prints OS information')
-parser.add_argument('-a', "--all", action="store_true", help='Print all information (RHEV excluded)')		
-parser.add_argument('-m', "--memory", action="store_true", help='Prints memory information')
 parser.add_argument('-k', "--kdump", action="store_true", help="Prints kdump information")
 parser.add_argument('-c', "--cpu", action="store_true", help='Print CPU information ONLY')
-parser.add_argument('-s', "--sysctl", action="store_true", help='Print all sysctl information')
-parser.add_argument('-i', "--ip", action="store_true", help='Print IP information')
+parser.add_argument('-m', "--memory", action="store_true", help='Prints memory information')
+parser.add_argument('-d', "--disk", action="store_true", help='Print /proc/partition information')
+parser.add_argument('-l', "--lspci", action="store_true", help='Print lspci information')
+parser.add_argument('-e', '--ethtool', action="store_true", help='Prints ethtool information')
 parser.add_argument('-g', "--bonding", action="store_true", help='Print bonding information')
-parser.add_argument('-t', "--test", action="store_true")
+parser.add_argument('-i', "--ip", action="store_true", help='Print IP information')
 parser.add_argument('-n', "--netdev", action="store_true", help='Print proc/net/dev information')
+parser.add_argument("--net", action="store_true", help='Alias for --ethtool, --bonding, --ip, --netdev')
+parser.add_argument('-s', "--sysctl", action="store_true", help='Print all sysctl information')
+
+parser.add_argument('-t', "--test", action="store_true")
+
 parser.add_argument('-r', "--rhev", action="store_true", help='Print RHEV Information')
 parser.add_argument("--db", action="store_true", help = 'Print RHEV DB information')
-parser.add_argument('-e', '--ethtool', action="store_true", help='Prints ethtool information')
-parser.add_argument("--net", action="store_true", help='Alias for --ethtool, --bonding, --ip, --netdev')
-parser.add_argument('-b', "--bios", action="store_true", help='Show BIOS and dmidecode information')
-parser.add_argument('-l', "--lspci", action="store_true", help='Show lspci information')
-parser.add_argument('-d', "--disk", action="store_true", help='Show /proc/partition information')
+
+
 args = parser.parse_args()
 
 # Define colors - yay color!
@@ -128,13 +132,24 @@ def get_status(target, status, local=False):
 		statuses['release'] = 'etc/redhat-release'
 		statuses['cmdline'] = 'proc/cmdline'
 		statuses['kernel'] = 'proc/version'
+		for stat in statuses:
+			if os.path.isfile(target + statuses[stat]):
+				with open(target + statuses[stat], 'r') as rfile:
+					for line in rfile:
+						statuses[stat] = line.rstrip('\n')
+			else:
+				statuses[stat] = 'not hound!'
 		for item in ['runlevel', 'uptime', 'date', 'hostname']:
 			process = subprocess.Popen(item, stdout=subprocess.PIPE)
 			stdout, stderr = process.communicate()
 			stats[item] = stdout.rstrip('\n')
-			
+		
+		try:
+			for item in stats:
+				statuses[item] = stats[item]
+		except:	
+			pass
 	# get evreything shoved into the statuses dictionary
-	
 	if status == 'all':
 		for key, path in statuses.items():
 			fullpath = '%s%s' %(target, path)
@@ -145,20 +160,20 @@ def get_status(target, status, local=False):
 						statuses[key] = result
 			else:
 				statuses[key] =  colors.RED  + path + ' not found!' + colors.ENDC
-		try:
-			for item in stats:
-				statuses[item] = stats[item]
-		except:
-			pass
+
+
 		return statuses
 	else:
-		if os.path.isfile(target + statuses[status]):
-			with open(target + statuses[status], 'r') as rfile:
-				for line in rfile:
-					statuses[status] = line.rstrip('\n')
-					return line.rstrip('\n')
+		if not local:
+			if os.path.isfile(target + statuses[status]):
+				with open(target + statuses[status], 'r') as rfile:
+					for line in rfile:
+						statuses[status] = line.rstrip('\n')
+						return line.rstrip('\n')
+			else:
+				return 'not found!'
 		else:
-			return 'not found!'
+			return statuses[status]
 def taint_check(target):
 	
 	# check for kernel taint, well known values go in this dictionary
@@ -276,7 +291,7 @@ def get_os_info(target, local):
 	
 
 	loadavg = get_loadavg(target, num_cpus, local)	
-	sys = get_status(target, 'date')			
+	sys = get_status(target, 'date', local)			
 	# from sys time and boot time calc uptime rather than butcher the uptime string more
 	if boottime and btime and ('not found' not in sys):         
 		# Python strptime only works for timezone the 
@@ -289,17 +304,17 @@ def get_os_info(target, local):
 
 	# Print it all pretty like.
 	print colors.SECTION + colors.BOLD + "OS " + colors.ENDC
-	print colors.HEADER_BOLD + '\t Hostname  : ' + colors.ENDC + get_status(target, 'hostname')
-	print colors.HEADER_BOLD +  '\t Release   : ' + colors.ENDC + get_status(target, 'release')
+	print colors.HEADER_BOLD + '\t Hostname  : ' + colors.ENDC + get_status(target, 'hostname', local)
+	print colors.HEADER_BOLD +  '\t Release   : ' + colors.ENDC + get_status(target, 'release', local)
 	print colors.HEADER_BOLD + '\t RHN Info  : ' + colors.ENDC + rhnserver
-	print colors.HEADER_BOLD + '\t Runlevel  : ' + colors.ENDC + get_status(target, 'runlevel')
+	print colors.HEADER_BOLD + '\t Runlevel  : ' + colors.ENDC + get_status(target, 'runlevel', local)
 	print colors.HEADER_BOLD +  '\t SELinux   : ' + colors.ENDC + selstate
 	
 	print colors.HEADER_BOLD + '\t Kernel    : ' + colors.ENDC
-	print '\t   ' + colors.BLUE + colors.BOLD + 'Booted kernel  : ' + colors.ENDC + str(get_status(target, 'kernel')).split(" ")[2]
+	print '\t   ' + colors.BLUE + colors.BOLD + 'Booted kernel  : ' + colors.ENDC + str(get_status(target, 'kernel', local)).split(" ")[2]
 	print '\t   ' + colors.BLUE + colors.BOLD + 'GRUB default   : '
 	print '\t   ' + colors.BLUE + colors.BOLD + 'Booted cmdline : ' + colors.ENDC
-	print '%15s' % ' ' + textwrap.fill(get_status(target, 'cmdline'), 90, subsequent_indent='%15s' % ' ')
+	print '%15s' % ' ' + textwrap.fill(get_status(target, 'cmdline', local), 90, subsequent_indent='%15s' % ' ')
 	print '\t   ' + colors.BLUE + colors.BOLD + 'Taint-check    : ' + colors.ENDC + str(tainted)
 	
 	print colors.GREEN + '%9s' % ' ' + colors.BOLD + '~ ' * 20 + colors.ENDC
@@ -754,71 +769,87 @@ def get_ip_info(target, local=False):
 		br_file = target + 'sos_commands/networking/brctl_show'
 	
 	# get bridge associations
-	with open(br_file, 'r') as brfile:
-		bridge_list = list()
-		bridges = {}
-		bridge_output = brfile.read()
-		
-		# KNOWN ISSUE:
-		# With the below regex, if the bridge only has a single interface on it
-		# it will not be captured
-		# For some reason I cannot get this regex to capture anything unless I explicitly
-		# list the tabs as seven '\t'
-		for bridge_lines in re.findall(r'(?m)^\S.*\n(?:\t\t\t\t\t\t\t.*\n)+', bridge_output):
-			bridge, _ = bridge_lines.split(None, 1)
-			bridges[bridge] = re.findall(r'(?m)\S+$', str(bridge_lines))
-			bridge_list.append(bridge)
-
-	with open(ip_file, 'r') as f:
-	    lines = [line for line in f if line.strip()]
-	    # group by line number
-	    for key, group in groupby(lines, lambda x: x.split()[1]):
-	        interface = []
-	        for thing in group:
-	            # append lines without repeating part
-	            interface += thing.split()[2:]
-	        if interface:
-				dev = str(key).rstrip(':')
-				interfaces[dev] = interface	
-	
-	    for key in interfaces:
-			bridge_member = ''
-			for item in bridge_list:
-				if key in bridges[item]:
-					bridge_member = item
-
-			try:
-				index = interfaces[key].index('mtu')
-				mtu = interfaces[key][index+1]
-			except:
-				mtu = ''
-			try:
-				index = interfaces[key].index('master')
-				slaveof = interfaces[key][index+1]
-			except:
-				slaveof = ''
-			try:
-				index = interfaces[key].index('inet')
-				ipaddr = interfaces[key][index+1]
-			except:
-				ipaddr = ''
-			int_info[key].append([ipaddr, slaveof, mtu])
-			try:
-				index = interfaces[key].index('link/ether')
-				hwaddr = interfaces[key][index+1]
-			except:
-				hwaddr = ''
+	if os.path.isfile(br_file):
+		brfile = True
+		with open(br_file, 'r') as bfile:
+			bridge_list = list()
+			bridges = {}
+			bridge_output = bfile.read()
 			
-			slaves = list()
-			slaves.append(slaveof)
-			slaves.append(bridge_member)
-			int_info[key] = ([ipaddr, slaves, mtu, hwaddr])
-
-
-
+			# KNOWN ISSUE:
+			# With the below regex, if the bridge only has a single interface on it
+			# it will not be captured
+			# For some reason I cannot get this regex to capture anything unless I explicitly
+			# list the tabs as seven '\t'
+			for bridge_lines in re.findall(r'(?m)^\S.*\n(?:\t\t\t\t\t\t\t.*\n)+', bridge_output):
+				bridge, _ = bridge_lines.split(None, 1)
+				bridges[bridge] = re.findall(r'(?m)\S+$', str(bridge_lines))
+				bridge_list.append(bridge)
+	else:
+		brfile = False
+	
+	if os.path.isfile(ip_file):
+		ipfile = True
+		with open(ip_file, 'r') as f:
+		    lines = [line for line in f if line.strip()]
+		    # group by line number
+		    for key, group in groupby(lines, lambda x: x.split()[1]):
+		        interface = []
+		        for thing in group:
+		            # append lines without repeating part
+		            interface += thing.split()[2:]
+		        if interface:
+					dev = str(key).rstrip(':')
+					interfaces[dev] = interface	
+		
+		    for key in interfaces:
+				bridge_member = ''
+				for item in bridge_list:
+					if key in bridges[item]:
+						bridge_member = item
+	
+				try:
+					index = interfaces[key].index('mtu')
+					mtu = interfaces[key][index+1]
+				except:
+					mtu = ''
+				try:
+					index = interfaces[key].index('master')
+					slaveof = interfaces[key][index+1]
+				except:
+					slaveof = ''
+				try:
+					index = interfaces[key].index('inet')
+					ipaddr = interfaces[key][index+1]
+				except:
+					ipaddr = ''
+				int_info[key].append([ipaddr, slaveof, mtu])
+				try:
+					index = interfaces[key].index('link/ether')
+					hwaddr = interfaces[key][index+1]
+				except:
+					hwaddr = ''
+				
+				slaves = list()
+				slaves.append(slaveof)
+				slaves.append(bridge_member)
+				int_info[key] = ([ipaddr, slaves, mtu, hwaddr])
+	
+	else:
+		ipfile = False
 	print colors.SECTION + colors.BOLD + 'IP ' + colors.ENDC
-	print colors.WHITE + colors.BOLD + '\t {:^15}        {:^20}      {:^11}   {:^12} {:^24}'.format('INT','IP ADDR', 'MEMBER OF','MTU', ' HW ADDR')
-	print '\t' + '=' * 16 + ' ' * 6 + '=' * 23 + ' ' * 4 + '=' * 13 + ' ' * 5 + '=' * 5 + '\t' + '=' * 19 + colors.ENDC
+	if not brfile:
+		print colors.RED + colors.BOLD + '\t BRIDGE INFORMATION NO FOUND.' + colors.ENDC
+	
+	if 	ipfile:
+
+		print colors.WHITE + colors.BOLD + '\t {:^15}        {:^20}      {:^11}   {:^12} {:^24}'.format('INT','IP ADDR', 'MEMBER OF','MTU', ' HW ADDR')
+		print '\t' + '=' * 16 + ' ' * 6 + '=' * 23 + ' ' * 4 + '=' * 13 + ' ' * 5 + '=' * 5 + '\t' + '=' * 19 + colors.ENDC
+	
+	else:
+		print colors.RED + colors.BOLD + '\t NO IP ADDR FILE FOUND. CANNOT PARSE' + colors.ENDC
+			
+
 	for key in sorted(int_info):
 		slavelist = ''
 		value = int_info[key]
@@ -837,6 +868,11 @@ def get_ip_info(target, local=False):
 			linecolor = colors.PURPLE
 		print '\t' + linecolor + '{:<15s}'.format(key) + '{:^36s}{:<16s}{:<5} \t {:<5}'.format(value[0],slavelist,value[2],value[3]) + colors.ENDC
 	
+	try:
+		os.remove(temp_file.name)
+		os.remove(mem_file.name)
+	except:
+		pass
 			
 			
 def get_netdev_info(target):
@@ -850,7 +886,7 @@ def get_netdev_info(target):
 					dev_info[key] = line[index+1:len(line)].lstrip(' ').rstrip('\n')
 					
 		
-	print colors.SECTION + 'Netdev' + colors.ENDC
+	print colors.SECTION + colors.BOLD + 'Netdev' + colors.ENDC
 	tab = '    '
 	print colors.WHITE + colors.BOLD + '\t' + 'Interface' + tab + 'RxGBytes' + tab + 'RxPackets'	+ tab + 'RxErrs'\
 	 + tab + 'RxDrop' + tab + 'TxGBytes' + tab + 'TxPackets' + tab + 'TxErrs' + tab + 'TxDrop'\
@@ -863,11 +899,21 @@ def get_netdev_info(target):
 		for num in 0, 1, 4, 5:
 			if value[num] == '':
 				value[num] = 1
-		print '\t' + '{:<10}'.format(item) + tab + '%6.2f' % round(int(value[0]) / (1024 * 1024 * 1024), 2)\
+		if 'eth' in item or 'em' in item:
+			linecolor = colors.BLUE
+		elif 'vlan' in item:
+			linecolor = colors.CYAN
+		elif 'bond' in item:
+			linecolor = colors.GREEN
+		elif 'vnet' in item:
+			linecolor = colors.WHITE
+		else:
+			linecolor = colors.PURPLE
+		print linecolor + '\t' + '{:<10}'.format(item) + tab + '%6.2f' % round(int(value[0]) / (1024 * 1024 * 1024), 2)\
 		+ tab + ' %7.0f' % round((int(value[1]) / (1000000)), 2) + ' m' + tab + '{:>4}'.format(value[2])\
 		+ tab + '{:>6}'.format(value[3]) + tab + '%7.2f' % round(int(value[8]) / (1024 * 1024 * 1024), 2)\
 		+ tab + '  %7.0f' % round((int(value[9]) / (1000000 )), 2) + ' m' + tab + '{:>4}'.format(value[10])\
-		+ tab + '{:>6}'.format(value[11]) + tab + '{:>6}'.format(value[12])
+		+ tab + '{:>6}'.format(value[11]) + tab + '{:>6}'.format(value[12]) + colors.ENDC
 			
 					
 def get_bonding_info(target):
@@ -927,7 +973,7 @@ def get_bonding_info(target):
 				bond_devs[name] = (bond_mode, bond_opts, phys_devs, hw_addrs)
 			
 	print colors.SECTION + colors.BOLD + 'Bonding' + colors.ENDC
-	print colors.WHITE + colors.BOLD + '\t {:^10}    {:^20}   {:^30}   {:^34}'.format('Device', 'Mode', 'BONDING_OPTS', 'Slave Interfaces')
+	print colors.WHITE + colors.BOLD + '\t {:^10}    {:^20}   {:^30}   {:^34}'.format('Device', 'Mode', 'BONDING OPTS', 'Slave Interfaces')
 	print '\t ' + '=' * 10 + '\t' + '=' * 19 + '\t  ' + '=' * 21 + '\t\t   ' + '=' * 26 + colors.ENDC
 	for item in sorted(bond_devs):
 		value = bond_devs[item]
@@ -961,7 +1007,7 @@ def get_ethtool_info(target):
 		driver, drv_ver, firmware_ver = get_ethi_info(target, device)
 		rxring, rxjumbo = get_ring_info(target, device)
 		dev_info[device] = [link_state, link_speed, an_state, rxring, rxjumbo, driver, drv_ver, firmware_ver]
-	print colors.SECTION + 'Ethtool' + colors.ENDC
+	print colors.SECTION + colors.BOLD +  'Ethtool' + colors.ENDC
 	print colors.WHITE + colors.BOLD + '\t {:^10}    {:^20}  {:^8}  {:^15}   {:^15}'.format('Device', 'Link', 'Auto-Neg', 'Ring', 'Driver Info')
 	print '\t ' + '=' * 10 + '\t ' + '=' * 17 + '  ' + '=' * 10 + '\t ' + '=' * 10 + '\t ' + '=' * 15 + colors.ENDC
 	for item in sorted(dev_info):
@@ -1033,10 +1079,8 @@ def get_storage_info(target, local):
 	disks = defaultdict(list)
 	total_space = 0
 	num_disks = 0
-	if local:
-		pass
-	else:
-		disk_file = target + 'proc/partitions'
+
+	disk_file = target + 'proc/partitions'
 		
 	with open(disk_file, 'r') as dfile:
 		for line in dfile:
@@ -1255,9 +1299,9 @@ def rhev_eval_db(dbDir):
 		for h in host_list:
 			for d in dc_list:
 				if h.get_uuid() == d.get_spm_uuid():
-					h.set_spm_status("*")
+					h.set_spm_status(True)
 				else:
-					h.set_spm_status('')
+					h.set_spm_status(False)
 
 			for c in cluster_list:
 				if c.get_uuid() == h.get_host_dc_uuid():
@@ -1424,6 +1468,7 @@ def get_main(runall, os, mem, kdump, cpu, sysctl, ip, bonding, test, netdev, rhe
 		netdev = True
 		eth = True
 		bios = True
+		disk = True
 	if net:
 		ip = True
 		bonding = True
