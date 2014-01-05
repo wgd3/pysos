@@ -111,13 +111,13 @@ class Table(object):
 			
 		# Print the table header
 		print ""
-		print ""
-		headerStr = "\""+widthStr.rstrip("\t")+"\".format("+contentStr.rstrip(",")+")"
-		print "\t\t" + eval(headerStr)		
-		print "\t\t" + sepStr
+		headerStr = "\"" + widthStr.rstrip("\t")+"\".format("+contentStr.rstrip(",")+")"
+		print "\t" + colors.WHITE + eval(headerStr)	
+		print "\t" + sepStr + colors.ENDC	
 		
 		# Start creating and displaying data
 		for e in self.tableEnts:
+			linecolor = colors.BLUE
 			#biggerThanHeader = False
 			dataFmtStr = ""
 			dataStr = ""
@@ -131,8 +131,10 @@ class Table(object):
 				if "bool" in str(type(newVal)):
 					if newVal:
 						newVal = "*"
+						linecolor = colors.CYAN + colors.BOLD
 					else:
 						newVal = ""
+						#linecolor = colors.CYAN
 				dataStr = dataStr + "\""+newVal+"\","
 
 				dataFmtStr = dataFmtStr + "{:^"+str(colWidths[index])+"}\t"
@@ -140,7 +142,7 @@ class Table(object):
 				
 
 			entStr = "\""+dataFmtStr.rstrip("\t")+"\".format("+dataStr.rstrip(",")+")"
-			print "\t\t" + eval(entStr)
+			print "\t" + linecolor + eval(entStr) + colors.ENDC
 				
 		# Finishing the table
 		print ""
