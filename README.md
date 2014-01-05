@@ -10,7 +10,7 @@ README
 
 #WHAT IS PYSOS?
 
-Pysos is a Python re-write of xsos, which is a bash utility written by Ryan Sawhill (rsaw@redhat.com)
+Pysos is a Python re-write of xsos, which is a bash utility written by Ryan Sawhill. 
 Pysos (and thus xsos) is used to parse sosreports and present related data is a more human-friendly style,
 and in the process get to the interesting bits of the data, rather than having to manually sift through loads of log files and similar.
 
