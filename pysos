@@ -1219,36 +1219,20 @@ def rhev_eval_db(dbDir):
 		print colors.SECTION + colors.BOLD + "RHEV Database Information" + colors.ENDC
 		print ""
 		
+		
+		dc_table = Table(dc_list,"name","uuid","compat")
+		dc_table.display()
+		
 		#Print data center list
-		#headerStr = '%2s '+ colors.BLUE + '%3s %4s %5s %6s' % ("Data Center Name","|","UUID","|","Compatibility Version")
-		print colors.WHITE + "\t  {:<25} {:^36} {:^32}".format("Data Center Name","UUID", "Compatibility Version")
-		print "\t "+ '=' * 22 + '\t   ' + '=' * 38 + '    ' + '=' * 23  + colors.ENDC
-	
-		for d in dc_list:
-			print colors.BLUE + "\t  {:<25} {:^36} {:^32}".format(d.get_name(),d.get_uuid(),d.get_compat()) + colors.ENDC
-			
-		print colors.ENDC
 				
 		####### End of Data Center Parsing #######
 
 		sd_list = masterDB.get_storage_domains()
+		sd_table = Table(sd_list,"name","uuid","storage_type","master")
+		sd_table.display()
 		
 		#Print data center list
-		#headerStr = '%2s '+ colors.BLUE + '%3s %4s %5s %6s' % ("Data Center Name","|","UUID","|","Compatibility Version")
-		print colors.WHITE + "\t  {:<25} {:^36}\t {:^9}   {:^10}".format("Storage Domain Name","UUID","Storage Type","Master")
-		print "\t "+ '=' * 22 + '\t   ' + '=' * 38 + '\t' + '=' * 15 + '  ' + '=' * 8 +  colors.ENDC
-		for d in sd_list:
-			master = d.get_master()
-			if master == 1:
-				master = '*'
-				linecolor = colors.CYAN + colors.BOLD
-			else:
-				master = ''
-				linecolor = colors.CYAN
-			print linecolor + "\t  {:<25} {:^36}\t   {:^10}    {:^10}".format(d.get_name(),d.get_uuid(),d.get_storage_type(),master) + colors.ENDC			
 
-			
-		print '\n'
 	####### End of Storage Domain Parsing ######
 		
 		# Generating clusters for host reference
@@ -1272,6 +1256,8 @@ def rhev_eval_db(dbDir):
 			for d in dc_list:
 				if h.get_uuid() == d.get_spm_uuid():
 					h.set_spm_status("*")
+				else:
+					h.set_spm_status('')
 
 			for c in cluster_list:
 				if c.get_uuid() == h.get_host_dc_uuid():
@@ -1283,12 +1269,6 @@ def rhev_eval_db(dbDir):
 							h.set_host_dc_name(d.get_name())
 							#print "Host DC set"
 					
-			# find length of the host name to auto-format the width of the first column
-			if len(h.get_name()) > hostNameLen:
-				hostNameLen = len(h.get_name())
-				
-				
-			
 			# try and find release version
 			hostDirName = h.get_name().split(".")
 			#print hostDirName
@@ -1312,23 +1292,10 @@ def rhev_eval_db(dbDir):
 						host_release = releaseVer[0].split()[6]
 						h.set_release_ver(host_release)
 		
-		print colors.WHITE + colors.BOLD + "\t  {:<36} {:^36}\t {:^11}\t {:^8} {:^14}{:^6}".format("Hypervisor","UUID","Data Center","Type","Release","SPM")
-		print "\t "+ '='* 15 + '\t\t' + ' ' * 6 + '=' * 36 + '\t' + '=' * 13 + ' ' * 4 + '=' * 8 + ' ' * 3 + '=' * 9 + '\t' + '=' * 5 + colors.ENDC
+		host_table = Table(host_list,"name","uuid","host_dc_name","host_type","spm_status")
+		host_table.display()
 		
-		for host in host_list:
-			name = host.get_name()
-			if '.com' in name or '.net' in name or '.gov' in name:
-				name = name.replace(' ', '')[:-4]
-			
-			spm = host.get_spm_status()
-			if spm:
-				spm = '*'
-				linecolor = colors.BLUE + colors.BOLD
-			else:
-				spm = ''
-				linecolor = colors.BLUE
-			print linecolor + "\t {:<36} {:^36}\t {:^12}\t  {:^7} {:^13} {:^5}".format(name[:32],host.get_uuid(),str(host.get_host_dc_name())[:13],host.get_host_type(),host.get_release_ver(),spm) + colors.ENDC
- 
+		
 	else:
 		print colors.WARN + "Could not find a database file"
 		
@@ -1427,8 +1394,10 @@ def parse_engine_log(logFile):
 		occurances = 0
 		for line in lines:
 			if ' '.join(errorProperties[7:]) in line:
-				singleOccurance = False
 				occurances += 1
+		if occurances > 1:
+			singleOccurance = False
+		
 		if singleOccurance:
 			print colors.HEADER_BOLD + "\t Only occurance of this error: " + colors.WHITE + "Yes"
 		else:
