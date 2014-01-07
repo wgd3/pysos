@@ -779,9 +779,7 @@ def get_ip_info(target, local=False):
 			# KNOWN ISSUE:
 			# With the below regex, if the bridge only has a single interface on it
 			# it will not be captured
-			# For some reason I cannot get this regex to capture anything unless I explicitly
-			# list the tabs as seven '\t'
-			for bridge_lines in re.findall(r'(?m)^\S.*\n(?:\t\t\t\t\t\t\t.*\n)+', bridge_output):
+			for bridge_lines in re.findall(r'(?m)^\S.*\n(?:\t*\n)+', bridge_output):
 				bridge, _ = bridge_lines.split(None, 1)
 				bridges[bridge] = re.findall(r'(?m)\S+$', str(bridge_lines))
 				bridge_list.append(bridge)
@@ -1288,12 +1286,12 @@ def rhev_eval_db(dbDir):
 		hostNameLen = 5
 		# look for all files in the parent of the passed 'dbDir', and if it is a dir then attempts to parse
 		rootDir = os.path.dirname(dbDir)
-		#print "rootDir: " + rootDir
+		
 		for d in os.listdir(rootDir):
-			#print(rootDir+"/"+d)
+			
 			if os.path.isdir(rootDir+"/"+d):
 				hostDirs.append(d)
-				#print("Appending dir: "+d)
+				
 		
 		
 		for h in host_list:
@@ -1305,24 +1303,22 @@ def rhev_eval_db(dbDir):
 
 			for c in cluster_list:
 				if c.get_uuid() == h.get_host_dc_uuid():
-					#print "winning"
+					
 					for d in dc_list:
-						#print c.get_dc_uuid()
-						#print d.get_uuid()
+						
 						if c.get_dc_uuid() == d.get_uuid():
 							h.set_host_dc_name(d.get_name())
-							#print "Host DC set"
+							
 					
 			# try and find release version
 			hostDirName = h.get_name().split(".")
-			#print hostDirName
+		
 			for dir in hostDirs:
-				#print dir
+				
 				names = dir.split("-")
-				#print names[0]
-				#print hostDirName[0]
+
 				if names[0] == hostDirName[0]:
-					#print "Match!"
+				
 					# this is a stupid hack, using '..' in the path name. stop being lazy and find a better alternative
 					releaseFile = open(dbDir+"/../"+dir+"/etc/redhat-release")
 					releaseVer = releaseFile.readlines()
@@ -1353,7 +1349,7 @@ def findDat(table,restFile):
 	openFile = open(restFile, "r")
 	lines = openFile.readlines()
 	
-	# print "Looking for " + table
+
 	
 	for n in lines:
 		if n.find(table) != -1:
@@ -1361,8 +1357,7 @@ def findDat(table,restFile):
 				datInd = n.find("PATH")
 				datFileName =  n[datInd+7:datInd+15]
 				if datFileName.endswith("dat"):
-					#print "Found dat line for " + table
-					#logging.warning('Return dat file: ' +datFileName)
+				
 					return datFileName
 	
 def parse_manager_logs(target):
