@@ -1147,6 +1147,7 @@ def get_rhev_hyp_info(target):
 		qemu_kvm = find_rpm(target, 'qemu-kvm-rhev')
 		qemu_tools = find_rpm(target, 'qemu-kvm-rhev-tools')
 		
+		
 		# get number of VMs running on this hypervisor currently
 		with open(target + 'ps', 'r') as psfile:
 			vm_list = []
@@ -1161,12 +1162,12 @@ def get_rhev_hyp_info(target):
 		print colors.HEADER_BOLD + '\t Release    : ' + colors.ENDC + rhevh_release
 		print colors.HEADER_BOLD + '\t Kernel     : ' + colors.ENDC + kernel.split()[2].rstrip('\n')
 		print ''
-		print colors.HEADER_BOLD + '\t vdsm       : ' + colors.ENDC + vdsm.split('-')[1] + '\t' + \
-		colors.HEADER_BOLD + '\t libvirt    : ' + colors.ENDC + libvirt.split('-')[1]
-		print colors.HEADER_BOLD + '\t SPICE      : ' + colors.ENDC + spice.split('-')[2] + '\t' + \
-		colors.HEADER_BOLD + '\t RHEV tools : ' + colors.ENDC + qemu_tools.split('-')[4]
-		print colors.HEADER_BOLD + '\t qemu-img   : ' + colors.ENDC + qemu_img.split('-')[3] + '\t' + \
-		colors.HEADER_BOLD + '\t qemu-kvm   : ' + colors.ENDC + qemu_kvm.split('-')[3]
+		print colors.HEADER_BOLD + '\t vdsm       : ' + colors.ENDC + vdsm[(vdsm.find('-'))+1:(vdsm.find('e'))-1] + '\t' + \
+		colors.HEADER_BOLD + '\t libvirt    : ' + colors.ENDC + libvirt[(vdsm.find('-'))+4:(libvirt.find('e'))-1]
+		print colors.HEADER_BOLD + '\t SPICE      : ' + colors.ENDC + spice[(vdsm.find('-'))+9:(spice.find('_'))-4] + '\t\t' + \
+		colors.HEADER_BOLD + '\t RHEV tools : ' + colors.ENDC + qemu_tools[20:(qemu_tools.find('_'))-4]
+		print colors.HEADER_BOLD + '\t qemu-img   : ' + colors.ENDC + qemu_img[14:(qemu_img.find('_'))-4] + '\t' + \
+		colors.HEADER_BOLD + '\t qemu-kvm   : ' + colors.ENDC + qemu_kvm[14:(qemu_kvm.find('_'))-4]
 		print '\n'
 		print colors.HEADER_BOLD + '\t Running VMs on this host : ' +colors.ENDC + str(running_vms)
 		vm_list.sort()
