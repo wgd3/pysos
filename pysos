@@ -215,15 +215,18 @@ def get_rhn(target, local):
 		
 def sel_check(target):
 	# checking for how SELinux starts
-	with open(target + 'etc/selinux/config', 'r') as selfile:
-		for line in selfile:
-			if re.match("SELINUX=", line):
-				index = line.find("=")
-				selstate = line[index+1:len(line)].rstrip('\n')
+	if os.path.isfile(target + 'etc/selinux/config'):
+		with open(target + 'etc/selinux/config', 'r') as selfile:
+			for line in selfile:
+				if re.match("SELINUX=", line):
+					index = line.find("=")
+					selstate = line[index+1:len(line)].rstrip('\n')
+					return selstate
+			if not selstate:
+				selstate = colors.WARN + 'SELinux state unknown' + colors.ENDC
 				return selstate
-		if not selstate:
-			selstate = colors.WARN + 'SELinux state unknown' + colors.ENDC
-			return selstate
+	else:
+		return 'Unknown. etc/selinux/config file not found'
 			
 def get_loadavg(target, cpus, local):
 	
@@ -1167,7 +1170,7 @@ def get_rhev_hyp_info(target):
 					index2 = line.find("-S -M")
 					vm_list.append(str(line[index+6:index2]).strip())
 		
-		print colors.SECTION + 'RHEV'
+		print colors.SECTION + 'Virtualization'
 		print colors.HEADER_BOLD + '\t Release    : ' + colors.ENDC + rhevh_release
 		print colors.HEADER_BOLD + '\t Kernel     : ' + colors.ENDC + kernel.split()[2].rstrip('\n')
 		print ''
