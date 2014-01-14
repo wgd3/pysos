@@ -85,7 +85,7 @@ def find_rpm(target, rpm, local=False):
 	if os.path.isfile(rpm_file):
 		with open(rpm_file, 'r') as rpmfile:
 			for line in rpmfile:
-				if rpm in line:
+				if line.startswith(rpm):
 					rpm_state = line.split()[0]
 					return rpm_state
 		if not rpm_state:
@@ -1135,17 +1135,26 @@ def get_rhev_info(target, check_db):
 		get_rhev_hyp_info(target)
 
 def get_rhev_hyp_info(target):
-	
+		packages = {}
 		running_vms = 0
 		rhevh_release = get_status(target, 'release')
 		kernel = get_status(target, 'kernel')
 		# Find package versions
-		vdsm = find_rpm(target, 'vdsm')
-		libvirt = find_rpm(target, 'libvirt')
-		spice = find_rpm(target, 'spice-server')
-		qemu_img = find_rpm(target, 'qemu-img-rhev')
-		qemu_kvm = find_rpm(target, 'qemu-kvm-rhev')
-		qemu_tools = find_rpm(target, 'qemu-kvm-rhev-tools')
+		packages['vdsm'] = find_rpm(target, 'vdsm')
+		packages['libvirt'] = find_rpm(target, 'libvirt')
+		packages['spice'] = find_rpm(target, 'spice-server')
+		packages['qemu_img'] = find_rpm(target, 'qemu-img-')
+		packages['qemu_kvm'] = find_rpm(target, 'qemu-kvm-')
+		packages['qemu_tools'] = find_rpm(target, 'qemu-kvm-rhev-tools')
+		
+		for item in packages:
+			if 'not installed' in packages[item]:
+				packages[item] = 'Not Installed'
+			else:
+				index = str(packages[item]).find('.')
+				index2 = str(packages[item]).find('.el')
+				packages[item] = str(packages[item])[index-1:index2]
+
 		
 		
 		# get number of VMs running on this hypervisor currently
@@ -1162,12 +1171,12 @@ def get_rhev_hyp_info(target):
 		print colors.HEADER_BOLD + '\t Release    : ' + colors.ENDC + rhevh_release
 		print colors.HEADER_BOLD + '\t Kernel     : ' + colors.ENDC + kernel.split()[2].rstrip('\n')
 		print ''
-		print colors.HEADER_BOLD + '\t vdsm       : ' + colors.ENDC + vdsm[(vdsm.find('-'))+1:(vdsm.find('e'))-1] + '\t' + \
-		colors.HEADER_BOLD + '\t libvirt    : ' + colors.ENDC + libvirt[(vdsm.find('-'))+4:(libvirt.find('e'))-1]
-		print colors.HEADER_BOLD + '\t SPICE      : ' + colors.ENDC + spice[(vdsm.find('-'))+9:(spice.find('_'))-4] + '\t\t' + \
-		colors.HEADER_BOLD + '\t RHEV tools : ' + colors.ENDC + qemu_tools[20:(qemu_tools.find('_'))-4]
-		print colors.HEADER_BOLD + '\t qemu-img   : ' + colors.ENDC + qemu_img[14:(qemu_img.find('_'))-4] + '\t' + \
-		colors.HEADER_BOLD + '\t qemu-kvm   : ' + colors.ENDC + qemu_kvm[14:(qemu_kvm.find('_'))-4]
+		print colors.HEADER_BOLD + '\t vdsm       : ' + colors.ENDC + packages['vdsm'] + '\t' + \
+		colors.HEADER_BOLD + '\t libvirt    : ' + colors.ENDC + packages['libvirt']
+		print colors.HEADER_BOLD + '\t SPICE      : ' + colors.ENDC + packages['spice'] + '\t\t' + \
+		colors.HEADER_BOLD + '\t RHEV tools : ' + colors.ENDC + packages['qemu_tools']
+		print colors.HEADER_BOLD + '\t qemu-img   : ' + colors.ENDC + packages['qemu_img']+ '\t' + \
+		colors.HEADER_BOLD + '\t qemu-kvm   : ' + colors.ENDC + packages['qemu_kvm']
 		print '\n'
 		print colors.HEADER_BOLD + '\t Running VMs on this host : ' +colors.ENDC + str(running_vms)
 		vm_list.sort()
