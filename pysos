@@ -22,6 +22,7 @@ from rhevlcbridge import *
 import os, argparse, textwrap, re, datetime, time, math, tempfile, subprocess, tarfile, string
 
 
+
 # switches
 parser = argparse.ArgumentParser(description='Make a sosreport pretty.')
 parser.add_argument('target', nargs='+', help='Target directory, aka the sosreport root. Use "/" to run locally')
@@ -96,7 +97,23 @@ def find_rpm(target, rpm, local=False):
 	try:
 		os.remove(temp_file.name)
 	except:
-		pass		
+		pass	
+		
+def check_rpm_ver(rpm):
+	index = rpm.find('.')
+	index2 = rpm.find('.el6')
+	rpmname = rpm[0:index-2]
+	version = rpm[index-1:index2]
+	if os.path.isfile('/usr/share/pysos.conf/' + rpmname.lower()):
+		with open('/usr/share/pysos.conf/' + rpmname, 'r') as rfile:
+			for line in rfile:
+				try:
+					if line.split()[0] == version:
+						return line[(line.find(':'))+1:len(line)].rstrip('\n')
+				except IndexError:
+					pass
+	return False
+		
 def find_chkconfig(target, service):
 	
 	# search for specific config states for a given service
@@ -457,19 +474,27 @@ def get_kernel_info(target, local):
 		# set these to default of the / filesystem.
 		filesys = '/'
 		mount_at = '/'
-		size = ''
+		size = int(0)
 		for item in config:
 			if 'path' in item:
 				crashpath = item.split()[1]
 				index = crashpath.find('/')
-				filesys = crashpath[index:(crashpath[index+1:len(crashpath)].find('/'))+1]
+				filesys = crashpath[index:len(crashpath)]
 				mount_at = "/"
 			with open(target + 'df', 'r') as df:
 				for line in df:
-					if line.endswith(filesys):	
-						size = int(line.split()[1]) / 1024
-						mount = '%s' %filesys
-						break
+					print mount_at
+					if len(line.split()) == 4:
+						if line.split()[4] == mount_at:	
+							size = round((int(line.split()[0]) / 1048576), 0)
+							#mount_at = '%s' %filesys
+							break
+					elif len(line.split()) == 6:
+						if line.split()[5] == mount_at:	
+							size = round((int(line.split()[1]) / 1048576), 0)
+							#mount_at = '%s' %filesys
+							break	
+
 	else:
 		config.append(str(colors.WARN + 'kdump.conf not found' + colors.ENDC))
 		mount_at = colors.WARN + 'Unknown' + colors.ENDC
@@ -490,7 +515,7 @@ def get_kernel_info(target, local):
 	for item in config:
 		print '\t\t\t        %s' %item
 	print colors.BLUE + colors.BOLD + '\t\t path mount   : ' + colors.ENDC + mount_at
-	print colors.BLUE + colors.BOLD + '\t\t avail space  : ' + colors.ENDC + size		
+	print colors.BLUE + colors.BOLD + '\t\t avail space  :' + colors.ENDC + ' %.0f GB' %size		
 	print colors.HEADER_BOLD + '\t Kernel Panic sysctl : ' + colors.ENDC
 	for item in panic_ctl:
 		kern = colors.BLUE + colors.BOLD + item.split()[0] + colors.ENDC
@@ -499,7 +524,7 @@ def get_kernel_info(target, local):
 		elif item.split()[2] == '1':
 			ctl = ' = 1 ' + colors.BOLD + '[enabled]' + colors.ENDC
 		else:
-			ctl = item.split()[2]
+			ctl = ' = %s ' %item.split()[2]
 		print '\t\t\t\t {:<31} {}'.format(item.split()[0], ctl)
 
 def get_cpu_info(target):
@@ -1139,9 +1164,11 @@ def get_rhev_info(target, check_db):
 
 def get_rhev_hyp_info(target):
 		packages = {}
+		rpm_check = {}
 		running_vms = 0
+		warn_count = 0
 		rhevh_release = get_status(target, 'release')
-		kernel = get_status(target, 'kernel')
+		packages['kernel'] = find_rpm(target, 'kernel')
 		# Find package versions
 		packages['vdsm'] = find_rpm(target, 'vdsm')
 		packages['libvirt'] = find_rpm(target, 'libvirt')
@@ -1149,7 +1176,19 @@ def get_rhev_hyp_info(target):
 		packages['qemu_img'] = find_rpm(target, 'qemu-img-')
 		packages['qemu_kvm'] = find_rpm(target, 'qemu-kvm-')
 		packages['qemu_tools'] = find_rpm(target, 'qemu-kvm-rhev-tools')
+		# Check RPM versions. Has to be a better way to do this
+		rpm_check['kernel'] = check_rpm_ver(packages['kernel'])
+		rpm_check['vdsm'] = check_rpm_ver(packages['vdsm'])
+		rpm_check['libvirt'] = check_rpm_ver(packages['libvirt'])
+		rpm_check['spice'] = check_rpm_ver(packages['spice'])
+		rpm_check['qemu_img'] = check_rpm_ver(packages['qemu_img'])
+		rpm_check['qemu_kvm'] = check_rpm_ver(packages['qemu_kvm'])
+		rpm_check['qemu_tool'] = check_rpm_ver(packages['qemu_tools'])
 		
+		for item in rpm_check:
+			if rpm_check[item]:
+				warn_count += 1
+				
 		for item in packages:
 			if 'not installed' in packages[item]:
 				packages[item] = 'Not Installed'
@@ -1164,7 +1203,7 @@ def get_rhev_hyp_info(target):
 		with open(target + 'ps', 'r') as psfile:
 			vm_list = []
 			for line in psfile:
-				if '/usr/libexec/qemu-kvm -name' in line:
+				if '/usr/libexec/qemu-kvm ' in line:
 					running_vms += 1
 					index = line.find('-name')
 					index2 = line.find("-S -M")
@@ -1172,7 +1211,7 @@ def get_rhev_hyp_info(target):
 		
 		print colors.SECTION + 'Virtualization'
 		print colors.HEADER_BOLD + '\t Release    : ' + colors.ENDC + rhevh_release
-		print colors.HEADER_BOLD + '\t Kernel     : ' + colors.ENDC + kernel.split()[2].rstrip('\n')
+		print colors.HEADER_BOLD + '\t Kernel     : ' + colors.ENDC + packages['kernel']
 		print ''
 		print colors.HEADER_BOLD + '\t vdsm       : ' + colors.ENDC + packages['vdsm'] + '\t' + \
 		colors.HEADER_BOLD + '\t libvirt    : ' + colors.ENDC + packages['libvirt']
@@ -1181,6 +1220,14 @@ def get_rhev_hyp_info(target):
 		print colors.HEADER_BOLD + '\t qemu-img   : ' + colors.ENDC + packages['qemu_img']+ '\t' + \
 		colors.HEADER_BOLD + '\t qemu-kvm   : ' + colors.ENDC + packages['qemu_kvm']
 		print '\n'
+
+		if warn_count > 0:
+			print colors.RED + colors.BOLD + '\t WARNING : ' + colors.ENDC 
+			for item in rpm_check:
+				if rpm_check[item]:
+					print '\t\t {:10} {:10} :{:<30}'.format(item, packages[item], str(rpm_check[item]).rstrip('\n'))
+		
+		print ''			
 		print colors.HEADER_BOLD + '\t Running VMs on this host : ' +colors.ENDC + str(running_vms)
 		vm_list.sort()
 		rows = math.ceil(len(vm_list) / 5)

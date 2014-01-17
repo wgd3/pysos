@@ -1,0 +1,4 @@
+4.10.2-28 : lvm2 dep. issue. Update vdsm package
+4.10.2-28.0 : lvm2 dep. issue. Update vdsm package
+4.10.2-27 : Multiple urgent SD bugs. Update immediately!
+4.10.2-1 : Unable to extend SD if PV in use bug. Update vdsm
