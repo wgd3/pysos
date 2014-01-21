@@ -92,7 +92,7 @@ def find_rpm(target, rpm, local=False):
 		if not rpm_state:
 			return 'not installed'
 	else:
-		return colors.WARN + 'installed rpms file not found!' + colors.ENDC
+		return 'installed-rpms not found'
 	
 	try:
 		os.remove(temp_file.name)
@@ -339,8 +339,8 @@ def get_os_info(target, local):
 	
 	print colors.GREEN + '%9s' % ' ' + colors.BOLD + '~ ' * 20 + colors.ENDC
 	
-	print colors.HEADER_BOLD  + '\t Sys time  : ' + colors.ENDC + sys
 	print colors.HEADER_BOLD  + '\t Boot time : ' + colors.ENDC + boottime
+	print colors.HEADER_BOLD  + '\t Sys time  : ' + colors.ENDC + sys
 	print colors.HEADER_BOLD + '\t Uptime    : ' + colors.ENDC + uptime
 	print colors.HEADER_BOLD + '\t Load Avg  : ' + colors.WHITE +'[%s CPUs] ' %(num_cpus) + colors.ENDC \
 	 + loadavg
@@ -834,13 +834,16 @@ def get_ip_info(target, local=False):
 		        if interface:
 					dev = str(key).rstrip(':')
 					interfaces[dev] = interface	
-		
+			
 		    for key in interfaces:
 				bridge_member = ''
-				for item in bridge_list:
-					if key in bridges[item]:
-						bridge_member = item
-	
+				try:
+					for item in bridge_list:
+						if key in bridges[item]:
+							bridge_member = item
+				except:
+					pass
+					
 				try:
 					index = interfaces[key].index('mtu')
 					mtu = interfaces[key][index+1]
@@ -872,8 +875,9 @@ def get_ip_info(target, local=False):
 		ipfile = False
 	print colors.SECTION + colors.BOLD + 'IP ' + colors.ENDC
 	if not brfile:
-		print colors.RED + colors.BOLD + '\t BRIDGE INFORMATION NO FOUND.' + colors.ENDC
-	
+		print colors.RED + colors.BOLD + '\t BRIDGE INFORMATION NOT FOUND' + colors.ENDC
+		print''
+		
 	if 	ipfile:
 
 		print colors.WHITE + colors.BOLD + '\t {:^15}        {:^20}      {:^11}   {:^12} {:^24}'.format('INT','IP ADDR', 'MEMBER OF','MTU', ' HW ADDR')
@@ -1153,7 +1157,7 @@ def get_storage_info(target, local):
 def get_rhev_info(target, check_db):
 	# logic to determine hyp/manager
 	rhevm = find_rpm(target, 'rhevm')
-	if 'not installed' in rhevm:
+	if 'not' in rhevm:
 		manager = False
 	else:
 		manager = True
@@ -1300,14 +1304,6 @@ def get_rhevm_info(target, check_db):
 		
 		# Find errors first
 		parse_manager_logs(target)
-	
-	
-# Method for evaulating the manager regardless of whether or not we find the database	
-# This method should expect to receive the original target path, that is, path to sosreport of manager
-def rhev_eval_mngr(target):
-	#print '\t rhev_eval_mngr has been called, beginning eval...'
-	print ""
-	
 	
 	
 # Method for evaluating the database for env information
