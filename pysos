@@ -19,7 +19,7 @@ from __future__ import division
 from itertools import groupby
 from collections import defaultdict
 from rhevlcbridge import *
-import os, argparse, textwrap, re, datetime, time, math, tempfile, subprocess, tarfile, string
+import os, argparse, textwrap, re, datetime, time, math, tempfile, subprocess, tarfile, string, json, urllib2
 
 
 
@@ -99,20 +99,42 @@ def find_rpm(target, rpm, local=False):
 	except:
 		pass	
 		
-def check_rpm_ver(rpm):
+def check_rpm_ver(rpm, stand_alone=False):
 	index = rpm.find('.')
 	index2 = rpm.find('.el6')
 	rpmname = rpm[0:index-2]
 	version = rpm[index-1:index2]
-	if os.path.isfile('/usr/share/pysos.conf/' + rpmname.lower()):
-		with open('/usr/share/pysos.conf/' + rpmname, 'r') as rfile:
-			for line in rfile:
-				try:
-					if line.split()[0] == version:
-						return line[(line.find(':'))+1:len(line)].rstrip('\n')
-				except IndexError:
-					pass
-	return False
+	base_url = "http://pysosweb-wdaniel.itos.redhat.com/"
+	check_url = base_url + 'check/' + rpmname + '/' + version
+
+	try:
+		rpm_check = urllib2.urlopen(check_url)
+		data = json.load(rpm_check)
+		#name = data['name']
+		#ver = data['version']
+		warning = data['warning']
+		status = data['status']
+		if stand_alone:
+					
+			if status == 'success':
+				return warning
+			elif status == 'no entries':
+				return 'No entries for ' + name + ' ' + ver
+			else:
+				return 'Invalid RPM'
+		else:
+			#print 'blarg'
+			if status == 'success':
+				return warning
+			else:
+				return False
+	except:
+		
+		if stand_alone:
+			return 'Cannot query pysosweb'
+		else:
+			
+			return False
 		
 def find_chkconfig(target, service):
 	
@@ -1229,7 +1251,7 @@ def get_rhev_hyp_info(target):
 			print colors.RED + colors.BOLD + '\t WARNING : ' + colors.ENDC 
 			for item in rpm_check:
 				if rpm_check[item]:
-					print '\t\t {:10} {:10} :{:<30}'.format(item, packages[item], str(rpm_check[item]).rstrip('\n'))
+					print '\t\t {:10} {:10}: {:<30}'.format(item, packages[item], str(rpm_check[item]).rstrip('\n'))
 		
 		print ''			
 		print colors.HEADER_BOLD + '\t Running VMs on this host : ' +colors.ENDC + str(running_vms)
@@ -1257,6 +1279,11 @@ def get_rhevm_info(target, check_db):
 	# Find RHEVM rpm
 	rhevm_ver = find_rpm(target, "rhevm-3")
 	print colors.HEADER_BOLD + "\t Version: " + colors.CYAN+ rhevm_ver + colors.ENDC
+	
+	rhevm_check = check_rpm_ver(rhevm_ver)
+
+	if rhevm_check:
+		print colors.RED + colors.BOLD + '\n\t WARNING : ' + colors.ENDC + '{} : {}'.format(rhevm_ver[0:(rhevm_ver.find('.el'))],rhevm_check)
 	
 	# Find simplified version for debug purposes
 	if "-3.0" in rhevm_ver:
