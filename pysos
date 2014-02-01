@@ -40,6 +40,7 @@ parser.add_argument('-i', "--ip", action="store_true", help='Print IP informatio
 parser.add_argument('-n', "--netdev", action="store_true", help='Print proc/net/dev information')
 parser.add_argument("--net", action="store_true", help='Alias for --ethtool, --bonding, --ip, --netdev')
 parser.add_argument('-s', "--sysctl", action="store_true", help='Print all sysctl information')
+parser.add_argument('-p', "--ps", action="store_true", help='Print ps information')
 
 parser.add_argument('-t', "--test", action="store_true")
 
@@ -407,6 +408,11 @@ def check_mem(target, scope):
 			else:
 				swap_used = 0
 				swap_perc = 0	
+			try:
+				hugepages
+			except:
+				hugepages = 0
+				hugepage_perc = 0
 			return used_mem, free_mem, total_mem, perc_used, hugepages, hugepage_perc,\
 			dirty_mem, dirty_perc, slab, slab_perc, swap_total, swap_free, swap_used, swap_perc,\
 			buffered_mem, cached_perc, cached_mem
@@ -1191,6 +1197,7 @@ def get_rhev_info(target, check_db):
 def get_rhev_hyp_info(target):
 		packages = {}
 		rpm_check = {}
+		vm_list = []
 		running_vms = 0
 		warn_count = 0
 		rhevh_release = get_status(target, 'release')
@@ -1226,14 +1233,14 @@ def get_rhev_hyp_info(target):
 		
 		
 		# get number of VMs running on this hypervisor currently
-		with open(target + 'ps', 'r') as psfile:
-			vm_list = []
-			for line in psfile:
-				if '/usr/libexec/qemu-kvm ' in line:
-					running_vms += 1
-					index = line.find('-name')
-					index2 = line.find("-S -M")
-					vm_list.append(str(line[index+6:index2]).strip())
+		if os.path.isfile(target + 'ps'):
+			with open(target + 'ps', 'r') as psfile:
+				for line in psfile:
+					if '/usr/libexec/qemu-kvm ' in line:
+						running_vms += 1
+						index = line.find('-name')
+						index2 = line.find("-S -M")
+						vm_list.append(str(line[index+6:index2]).strip())
 		
 		print colors.SECTION + 'Virtualization'
 		print colors.HEADER_BOLD + '\t Release    : ' + colors.ENDC + rhevh_release
@@ -1538,10 +1545,89 @@ def parse_engine_log(logFile):
 
 def parse_messages_log(logFile):
 	print ""
+
+def get_ps_info(target):
+	print colors.HEADER_BOLD + 'PS' + colors.ENDC
+	retval = parse_ps_file(target)	
+	usage = defaultdict(list)
+	bad_proc = defaultdict(list)
+	bad_procs = 0 
+	header = '\t' + colors.BLUE + colors.BOLD + '{:^6}\t{:^6}\t{:^5} {:^5}  {:^7}  {:^7}  {:^4} {:^4}  {:^5}{:^8} {:<8}'.format('USER', 'PID', '%CPU', \
+	'%MEM', 'VSZ-MB', 'RSS-MB', 'TTY', 'STAT', 'START', 'TIME', 'COMMAND') + colors.ENDC
+	print '\t' + colors.WHITE + 'Total processes : ' + colors.ENDC + str(len(retval)) +'\n'
+	# get top usage by user
+	for item in retval:
+		value = retval[retval.index(item)]
+		if usage.has_key(value[0]):
+			usage[value[0]][0] += float(value[2])
+			usage[value[0]][1] += float(value[3])
+			usage[value[0]][2] += float(value[5])
+		else:
+			usage[value[0]] = [float(value[2]), float(value[3]), float(value[5])]
 	
+	print '\t' + colors.WHITE + 'Top Users of CPU and MEM : ' + colors.ENDC
+	print '\t ' + colors.BLUE + colors.BOLD + '{:6}  {:5}  {:5}  {:7}'.format('USER', '%CPU', '%MEM', 'RSS') + colors.ENDC
+	report_usage = sorted(usage.items(), reverse=True, key=lambda x: x[1][2])
+	for i in xrange(0,4):
+		value = report_usage[i]
+		print '\t {:<7}  {:<5} {:^5}  {:<5.2f} GB'.format(value[0], value[1][0], value[1][1], int(value[1][2]) / 1048576)
+	print ''
+	# search for defunct and trouble processes
+	for item in retval:
+		value = retval[retval.index(item)]
+		if any('<defunct>' in item for item in value) or any('D' in item for item in value[7]):
+			bad_procs += 1
+			bad_proc[bad_procs] = value
+	if bad_procs > 0:
+		print '\t' + colors.WHITE + 'Uninterruptable Sleep and Defunct Processes : ' + colors.ENDC
+		print header
+		for each in range(bad_procs):
+			print_ps_info(bad_proc[bad_procs], 1, single=True)
+	
+	# sort by CPU usage	
+	print '\t' + colors.WHITE + 'Top CPU processes : ' + colors.ENDC
+	print header
+	retval.sort(reverse=True, key=lambda x: float(x[2]))
+	print_ps_info(retval, 10)
+	
+	# sort by MEM usage
+	# Known bug: if retval is not refreshed, sorting by memory breaks. I have no idea why
+	print '\t' + colors.WHITE + 'Top Memory processes : ' + colors.ENDC
+	print header
+	retval = parse_ps_file(target)
+	retval.sort(reverse=True, key=lambda x: float(x[5]))	
+	print_ps_info(retval, 10)	
+
+def parse_ps_file(target):
+	retval = []
+	with open(target + 'ps', 'r') as psfile:
+		psfile.next()
+		for line in psfile:
+			proc = line.split()
+			nfields = len(line.split()) -1
+			retval.append(line.split(None, nfields))
+	return retval
+
+def print_ps_info(retval, num, single=False):
+	for i in xrange(0,num):
+		if single:
+			ps = retval
+		else:
+			ps = retval[i]
+		ps[4] = int(ps[4]) / 1024
+		ps[5] = int(ps[5]) / 1024
+		cmd = ''
+		for i in xrange(10, 13):
+			try:
+				cmd = cmd + ' ' + str(ps[i]).strip('\n')
+			except:
+				pass
+		print '\t{:^7}\t{:^6}\t{:^5} {:^5}  {:<7.0f}  {:<7.0f}  {:^5} {:^4} {:^6} {:<7}{}'.format(ps[0], ps[1], ps[2], ps[3], ps[4], ps[5], ps[6], ps[7], ps[8], ps[9], cmd[0:50])
+	print ''
+
 
 def get_main(runall, os, mem, kdump, cpu, sysctl, ip, bonding, test, netdev, rhev, db, eth, net, bios, lspci,\
- disk, local, target):
+ disk, ps, local, target):
 	if runall:
 		os = True
 		mem = True
@@ -1585,6 +1671,8 @@ def get_main(runall, os, mem, kdump, cpu, sysctl, ip, bonding, test, netdev, rhe
 		get_rhev_info(target, db)
 	if disk:
 		get_storage_info(target, local)
+	if ps:
+		get_ps_info(target)
 		
 				
 			
@@ -1599,7 +1687,7 @@ if not target.endswith('/'):
 	
 
 get_main(args.all, args.os, args.memory, args.kdump, args.cpu, args.sysctl, args.ip\
-, args.bonding, args.test, args.netdev, args.rhev, args.db, args.ethtool, args.net, args.bios, args.lspci, args.disk, local, target)
+, args.bonding, args.test, args.netdev, args.rhev, args.db, args.ethtool, args.net, args.bios, args.lspci, args.disk, args.ps, local, target)
 
 
 
