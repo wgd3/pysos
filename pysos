@@ -41,6 +41,7 @@ parser.add_argument('-n', "--netdev", action="store_true", help='Print proc/net/
 parser.add_argument("--net", action="store_true", help='Alias for --ethtool, --bonding, --ip, --netdev')
 parser.add_argument('-s', "--sysctl", action="store_true", help='Print all sysctl information')
 parser.add_argument('-p', "--ps", action="store_true", help='Print ps information')
+parser.add_argument("--check", help='Check package for known bugs')
 
 parser.add_argument('-t', "--test", action="store_true")
 
@@ -99,8 +100,34 @@ def find_rpm(target, rpm, local=False):
 		os.remove(temp_file.name)
 	except:
 		pass	
+
+def check_installed(target, rpm):
+	print colors.SECTION + 'Package Check' + colors.ENDC
+	print ''
+	
+	if rpm == 'all':
+		with open(target + 'installed-rpms', 'r') as rfile:
+			for line in rfile:
+				ver = line.split()[0]
+				package = check_rpm_ver(ver, all_test=True)
+				if package:
+					print '\t' + colors.HEADER_BOLD +' {:10} : '.format(ver) + colors.ENDC +' {:20}'.format(package[0]) \
+					+ colors.WHITE + '  KCS :' + colors.ENDC +' {:7}'.format(package[1]) + colors.WHITE + '  BZ :' + colors.ENDC \
+					+' {:7}'.format(package[2])
+	else:
+		with open(target + 'installed-rpms', 'r') as rfile:
+			for line in rfile:
+				if rpm in line:
+					ver = line.split()[0]
+					package = check_rpm_ver(ver, stand_alone=True)
+					if type(package) is list:
+						print '\t' + colors.HEADER_BOLD +' {:10} : '.format(ver) + colors.ENDC +' {:20}'.format(package[0]) \
+					+ colors.WHITE + '  KCS :' + colors.ENDC +' {:7}'.format(package[1]) + colors.WHITE + '  BZ :' + colors.ENDC \
+					+' {:7}'.format(package[2])
+					else:
+						pass
 		
-def check_rpm_ver(rpm, stand_alone=False):
+def check_rpm_ver(rpm, stand_alone=False, all_test=False):
 	index = rpm.find('.')
 	index2 = rpm.find('.el6')
 	rpmname = rpm[0:index-2]
@@ -110,31 +137,39 @@ def check_rpm_ver(rpm, stand_alone=False):
 
 	try:
 		rpm_check = urllib2.urlopen(check_url)
-		data = json.load(rpm_check)
-		#name = data['name']
-		#ver = data['version']
-		warning = data['warning']
-		status = data['status']
-		if stand_alone:
-					
-			if status == 'success':
-				return warning
-			elif status == 'no entries':
-				return 'No entries for ' + name + ' ' + ver
-			else:
-				return 'Invalid RPM'
-		else:
-			#print 'blarg'
-			if status == 'success':
-				return warning
-			else:
-				return False
 	except:
-		
 		if stand_alone:
 			return 'Cannot query pysosweb'
+		else:		
+			return False
+	data = json.load(rpm_check)
+	status = data['status']
+	if stand_alone:
+				
+		if status == 'success':
+			bz = data['bz']
+			kcs = data['kcs']
+			warning = data['warning']
+			return [warning, kcs, bz]
+		elif 'fail' in status:
+			return 'No entries found'
 		else:
-			
+			return 'Invalid RPM'
+	elif all_test:
+		if status == 'success':
+			bz = data['bz']
+			kcs = data['kcs']
+			warning = data['warning']
+			return [warning, kcs, bz]
+		else:
+			return False	
+	else:
+		if status == 'success':
+			bz = data['bz']
+			kcs = data['kcs']
+			warning = data['warning']
+			return [warning, kcs, bz]
+		else:
 			return False
 		
 def find_chkconfig(target, service):
@@ -511,7 +546,6 @@ def get_kernel_info(target, local):
 				mount_at = "/"
 			with open(target + 'df', 'r') as df:
 				for line in df:
-					print mount_at
 					if len(line.split()) == 4:
 						if line.split()[4] == mount_at:	
 							size = round((int(line.split()[0]) / 1048576), 0)
@@ -1201,6 +1235,8 @@ def get_rhev_hyp_info(target):
 		running_vms = 0
 		warn_count = 0
 		rhevh_release = get_status(target, 'release')
+		if 'Hypervisor' in rhevh_release:
+			hyper_ver = rhevh_release[rhevh_release.find('('):rhevh_release.find('.el6)')]
 		packages['kernel'] = find_rpm(target, 'kernel')
 		# Find package versions
 		packages['vdsm'] = find_rpm(target, 'vdsm')
@@ -1258,7 +1294,9 @@ def get_rhev_hyp_info(target):
 			print colors.RED + colors.BOLD + '\t WARNING : ' + colors.ENDC 
 			for item in rpm_check:
 				if rpm_check[item]:
-					print '\t\t {:10} {:10}: {:<30}'.format(item, packages[item], str(rpm_check[item]).rstrip('\n'))
+					print '\t\t {:10} {:10}: {:<30} '.format(item, packages[item], str(rpm_check[item][0]).rstrip('\n'))
+					print '\t\t\t KCS : ' + colors.WHITE + '{} '.format(rpm_check[item][1]) + colors.ENDC + '\tBZ : ' + colors.WHITE + \
+					'{}'.format(rpm_check[item][2]) + colors.ENDC
 		
 		print ''			
 		print colors.HEADER_BOLD + '\t Running VMs on this host : ' +colors.ENDC + str(running_vms)
@@ -1588,7 +1626,7 @@ def get_ps_info(target):
 	print '\t' + colors.WHITE + 'Top CPU processes : ' + colors.ENDC
 	print header
 	retval.sort(reverse=True, key=lambda x: float(x[2]))
-	print_ps_info(retval, 10)
+	print_ps_info(retval, 5)
 	
 	# sort by MEM usage
 	# Known bug: if retval is not refreshed, sorting by memory breaks. I have no idea why
@@ -1596,7 +1634,7 @@ def get_ps_info(target):
 	print header
 	retval = parse_ps_file(target)
 	retval.sort(reverse=True, key=lambda x: float(x[5]))	
-	print_ps_info(retval, 10)	
+	print_ps_info(retval, 5)	
 
 def parse_ps_file(target):
 	retval = []
@@ -1627,7 +1665,7 @@ def print_ps_info(retval, num, single=False):
 
 
 def get_main(runall, os, mem, kdump, cpu, sysctl, ip, bonding, test, netdev, rhev, db, eth, net, bios, lspci,\
- disk, ps, local, target):
+ disk, ps, check, local, target):
 	if runall:
 		os = True
 		mem = True
@@ -1673,6 +1711,8 @@ def get_main(runall, os, mem, kdump, cpu, sysctl, ip, bonding, test, netdev, rhe
 		get_storage_info(target, local)
 	if ps:
 		get_ps_info(target)
+	if check:
+		check_installed(target, check)
 		
 				
 			
@@ -1687,7 +1727,7 @@ if not target.endswith('/'):
 	
 
 get_main(args.all, args.os, args.memory, args.kdump, args.cpu, args.sysctl, args.ip\
-, args.bonding, args.test, args.netdev, args.rhev, args.db, args.ethtool, args.net, args.bios, args.lspci, args.disk, args.ps, local, target)
+, args.bonding, args.test, args.netdev, args.rhev, args.db, args.ethtool, args.net, args.bios, args.lspci, args.disk, args.ps, args.check, local, target)
 
 
 
