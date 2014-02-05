@@ -105,6 +105,10 @@ def check_installed(target, rpm):
 	print colors.SECTION + 'Package Check' + colors.ENDC
 	print ''
 	
+	if not os.path.isfile(target + 'installed-rpms'):
+		print colors.RED + colors.BOLD + '\t Installed RPMs file not found' + colors.ENDC
+		return False
+	
 	if rpm == 'all':
 		with open(target + 'installed-rpms', 'r') as rfile:
 			for line in rfile:
@@ -213,7 +217,7 @@ def get_status(target, status, local=False):
 					for line in rfile:
 						statuses[stat] = line.rstrip('\n')
 			else:
-				statuses[stat] = 'not hound!'
+				statuses[stat] = 'not found!'
 		for item in ['runlevel', 'uptime', 'date', 'hostname']:
 			process = subprocess.Popen(item, stdout=subprocess.PIPE)
 			stdout, stderr = process.communicate()
@@ -224,7 +228,7 @@ def get_status(target, status, local=False):
 				statuses[item] = stats[item]
 		except:	
 			pass
-	# get evreything shoved into the statuses dictionary
+	# get everything shoved into the statuses dictionary
 	if status == 'all':
 		for key, path in statuses.items():
 			fullpath = '%s%s' %(target, path)
@@ -682,7 +686,7 @@ def get_bios_info(target, local):
 					server_type = line[index+1:len(line)].rstrip('\n')
 				if 'UUID:' in line:
 					serv_uuid = line.split()[1]
-			# now, some ugly voodoo to get items that have the same leading header
+			# now, some ugly badness to get items that have the same leading header
 				if 'Family:' in line:
 					if fam_count == 0:
 						fam_count += 1
@@ -1276,7 +1280,9 @@ def get_rhev_hyp_info(target):
 						running_vms += 1
 						index = line.find('-name')
 						index2 = line.find("-S -M")
-						vm_list.append(str(line[index+6:index2]).strip())
+						vm_name = str(line[index+6:index2]).strip()
+						vm_mem =str(round((int(line.split()[5]) / 1048576), 0))
+						vm_list.append(vm_name + ' (%s GB) ' %vm_mem)
 		
 		print colors.SECTION + 'Virtualization'
 		print colors.HEADER_BOLD + '\t Release    : ' + colors.ENDC + rhevh_release
@@ -1299,7 +1305,7 @@ def get_rhev_hyp_info(target):
 					'{}'.format(rpm_check[item][2]) + colors.ENDC
 		
 		print ''			
-		print colors.HEADER_BOLD + '\t Running VMs on this host : ' +colors.ENDC + str(running_vms)
+		print colors.HEADER_BOLD + '\t Running VMs on this host : ' +colors.ENDC + str(running_vms) + '    RSS usage in ()'
 		vm_list.sort()
 		rows = math.ceil(len(vm_list) / 5)
 		for number in range(0, int(rows)):
@@ -1312,7 +1318,7 @@ def get_rhev_hyp_info(target):
 				except:
 					to_print.append('')
 						
-			print colors.GREEN + '\t\t' + '{:15} {:15} {:15} {:15} {:15}'.format(to_print[4][:15], to_print[3][:15], to_print[2][:15], to_print[1][:15], to_print[0][:15]) + colors.ENDC	
+			print colors.GREEN + '\t\t' + '{:20} {:20} {:20} {:20} {:20}'.format(to_print[4][:25], to_print[3][:25], to_print[2][:25], to_print[1][:25], to_print[0][:25]) + colors.ENDC	
 	
 
 
