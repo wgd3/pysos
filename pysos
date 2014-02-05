@@ -111,7 +111,7 @@ def check_installed(target, rpm):
 				ver = line.split()[0]
 				package = check_rpm_ver(ver, all_test=True)
 				if package:
-					print '\t' + colors.HEADER_BOLD +' {:10} : '.format(ver) + colors.ENDC +' {:20}'.format(package[0]) \
+					print '\t' + colors.RED + colors.BOLD +' {:10} : '.format(ver) + colors.ENDC +' {:20}'.format(package[0]) \
 					+ colors.WHITE + '  KCS :' + colors.ENDC +' {:7}'.format(package[1]) + colors.WHITE + '  BZ :' + colors.ENDC \
 					+' {:7}'.format(package[2])
 	else:
@@ -121,11 +121,11 @@ def check_installed(target, rpm):
 					ver = line.split()[0]
 					package = check_rpm_ver(ver, stand_alone=True)
 					if type(package) is list:
-						print '\t' + colors.HEADER_BOLD +' {:10} : '.format(ver) + colors.ENDC +' {:20}'.format(package[0]) \
+						print '\t' + colors.RED + colors.BOLD +'{:10} : '.format(ver) + colors.ENDC +' {:20}'.format(package[0]) \
 					+ colors.WHITE + '  KCS :' + colors.ENDC +' {:7}'.format(package[1]) + colors.WHITE + '  BZ :' + colors.ENDC \
 					+' {:7}'.format(package[2])
 					else:
-						pass
+						print '\t' + colors.BLUE + ver + colors.ENDC + ' : %s' % package
 		
 def check_rpm_ver(rpm, stand_alone=False, all_test=False):
 	index = rpm.find('.')
