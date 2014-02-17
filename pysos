@@ -382,7 +382,7 @@ def get_os_info(target, local):
 	sys = get_status(target, 'date', local)			
 	# from sys time and boot time calc uptime rather than butcher the uptime string more
 	if boottime and btime and ('not found' not in sys):         
-		# Python strptime only works for timezone the 
+											# Python strptime only works for timezone the 
 		index = sys.find(sys.split()[-2])	# local computer is set to, so we need to strip the TZ
 		systime = str(sys[0:index] + sys[index+3:len(sys)])
 		systimesec = time.mktime(datetime.datetime.strptime(systime, "%a %b  %d %H:%M:%S %Y").timetuple())		
@@ -558,13 +558,13 @@ def get_kernel_info(target, local):
 				for line in df:
 					if len(line.split()) == 4:
 						if line.split()[4] == mount_at:	
-							size = round((int(line.split()[0]) / 1048576), 0)
-							#mount_at = '%s' %filesys
+							size = str((round((int(line.split()[0]) / 1048576), 0)) + ' GB')
+							
 							break
 					elif len(line.split()) == 6:
 						if line.split()[5] == mount_at:	
-							size = round((int(line.split()[1]) / 1048576), 0)
-							#mount_at = '%s' %filesys
+							size = str((round((int(line.split()[1]) / 1048576), 0)) + ' GB')
+							
 							break	
 
 	else:
@@ -587,7 +587,7 @@ def get_kernel_info(target, local):
 	for item in config:
 		print '\t\t\t        %s' %item
 	print colors.BLUE + colors.BOLD + '\t\t path mount   : ' + colors.ENDC + mount_at
-	print colors.BLUE + colors.BOLD + '\t\t avail space  :' + colors.ENDC + ' %.0f GB' %size		
+	print colors.BLUE + colors.BOLD + '\t\t avail space  :' + colors.ENDC + ' %s' %size		
 	print colors.HEADER_BOLD + '\t Kernel Panic sysctl : ' + colors.ENDC
 	for item in panic_ctl:
 		kern = colors.BLUE + colors.BOLD + item.split()[0] + colors.ENDC
@@ -845,8 +845,10 @@ def get_lspci_info(target, local):
 	linecolor = colors.BLUE + '\t\t'
 	for item in sorted(devices):
 		value = devices[item]
+		if 'Serial Attached' in value[0]:
+				value[0] = 'SAS'
 		# only display hardware devices we care about. Can expand this as we need to
-		show_these = ['VGA', 'Ethernet', 'Network', 'Realtek', 'SCSI']
+		show_these = ['VGA', 'Ethernet', 'Network', 'Realtek', 'SCSI', 'SAS']
 		for item in show_these:
 			if item in value[0]:
 				print linecolor +  '{:<10} '.format(value[0].split()[0]) + colors.WHITE + '{:^1} ports '.format(value[2]) + colors.ENDC + value[1]
@@ -1290,7 +1292,7 @@ def get_rhev_hyp_info(target):
 						index2 = line.find("-S -M")
 						vm_name = str(line[index+6:index2]).strip()
 						vm_mem =str(round((int(line.split()[5]) / 1048576), 0))
-						vm_list.append(vm_name + ' (%s GB) ' %vm_mem)
+						vm_list.append(vm_name + ' (%s) ' %vm_mem)
 		
 		print colors.SECTION + 'Virtualization'
 		print colors.HEADER_BOLD + '\t Release    : ' + colors.ENDC + rhevh_release
@@ -1618,11 +1620,11 @@ def get_ps_info(target):
 			usage[value[0]] = [float(value[2]), float(value[3]), float(value[5])]
 	
 	print '\t' + colors.WHITE + 'Top Users of CPU and MEM : ' + colors.ENDC
-	print '\t ' + colors.BLUE + colors.BOLD + '{:6}  {:5}  {:5}  {:7}'.format('USER', '%CPU', '%MEM', 'RSS') + colors.ENDC
+	print '\t ' + colors.BLUE + colors.BOLD + '{:7}  {:5}  {:5}  {:7}'.format('USER', '%CPU', '%MEM', 'RSS') + colors.ENDC
 	report_usage = sorted(usage.items(), reverse=True, key=lambda x: x[1][2])
 	for i in xrange(0,4):
 		value = report_usage[i]
-		print '\t {:<7}  {:<5} {:^5}  {:<5.2f} GB'.format(value[0], value[1][0], value[1][1], int(value[1][2]) / 1048576)
+		print '\t {:<8}  {:<5} {:^5}  {:5.2f} GB'.format(value[0], value[1][0], value[1][1], int(value[1][2]) / 1048576)
 	print ''
 	# search for defunct and trouble processes
 	for item in retval:
@@ -1674,7 +1676,7 @@ def print_ps_info(retval, num, single=False):
 				cmd = cmd + ' ' + str(ps[i]).strip('\n')
 			except:
 				pass
-		print '\t{:^7}\t{:^6}\t{:^5} {:^5}  {:<7.0f}  {:<7.0f}  {:^5} {:^4} {:^6} {:<7}{}'.format(ps[0], ps[1], ps[2], ps[3], ps[4], ps[5], ps[6], ps[7], ps[8], ps[9], cmd[0:50])
+		print '\t{:^8} {:^6}\t{:^5} {:^5}  {:<7.0f}  {:<7.0f}  {:^5} {:^4} {:^6} {:<7}{}'.format(ps[0], ps[1], ps[2], ps[3], ps[4], ps[5], ps[6], ps[7], ps[8], ps[9], cmd[0:50])
 	print ''
 
 
