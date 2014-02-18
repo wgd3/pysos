@@ -1328,11 +1328,11 @@ def get_rhev_hyp_info(target):
 					vm_list.remove(vm_list[4-i])
 				except:
 					to_print.append('')			
-			print '\t' + print_vms(to_print[4]) + print_vms(to_print[3]) + print_vms(to_print[2]) + print_vms(to_print[1]) + print_vms(to_print[0])
+			print '\t ' + print_vms(to_print[4]) + print_vms(to_print[3]) + print_vms(to_print[2]) + print_vms(to_print[1]) + print_vms(to_print[0])
 
 def print_vms(to_print):
 	try:
-		return colors.GREEN + ' {:10}'.format(to_print[0][:10]) + colors.ENDC + '({} / {}GB)'.format(to_print[1], to_print[2])
+		return colors.GREEN + ' {:12} '.format(to_print[0][:12]) + colors.ENDC + '({} / {}GB)'.format(to_print[1], to_print[2])
 	except:
 		return ''
 		
