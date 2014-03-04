@@ -1339,7 +1339,7 @@ def print_vms(to_print):
 		
 def get_rhevm_info(target, check_db):
 	# grab / print basic information first
-	print colors.SECTION + colors.BOLD + "RHEV-M Information"
+	print colors.SECTION + colors.BOLD + "RHEV-M Information" + colors.ENDC
 	print '\n'
 
 	# Find RHEVM rpm
@@ -1525,7 +1525,7 @@ def parse_manager_logs(target):
 		
 	# grab / print basic information first
 	print ""
-	print colors.SECTION + colors.BOLD + "Log Files"
+	print colors.SECTION + colors.BOLD + "Log Files" + colors.ENDC
 	print ""
 	
 	# Gather main log files
@@ -1596,7 +1596,7 @@ def parse_engine_log(logFile):
 			singleOccurance = False
 		
 		if singleOccurance:
-			print colors.HEADER_BOLD + "\t Only occurance of this error: " + colors.WHITE + "Yes"
+			print colors.HEADER_BOLD + "\t Only occurance of this error: " + colors.WHITE + "Yes" + colors.ENDC
 		else:
 			print colors.HEADER_BOLD + "\t Only occurance of this error: " + colors.ENDC + colors.RED + "No. Errors appear " + str(occurances) + " times in engine.log starting at " + ' '.join(errorLines[0].split(" ")[0:2]) + colors.ENDC
 			
