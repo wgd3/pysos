@@ -4,7 +4,7 @@ def get_rhev_hyp_info(target):
 		vm_list = []
 		running_vms = 0
 		warn_count = 0
-		rhevh_release = get_status(target, 'release')
+		rhevh_release = getstats.get_status(target, 'release')
 		packages['kernel'] = find_rpm(target, 'kernel')
 		# Find package versions
 		packages['vdsm'] = find_rpm(target, 'vdsm')

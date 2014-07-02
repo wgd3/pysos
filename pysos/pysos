@@ -20,8 +20,8 @@ from itertools import groupby
 from collections import defaultdict
 from rhevlcbridge import *
 import os, argparse, textwrap, re, datetime, time, math, tempfile, subprocess, tarfile, string
-from rhevm import *
 from opsys import *
+from rhev import *
 from kernel import *
 from network import *
 from storage import *
@@ -101,7 +101,6 @@ def check_installed(target, rpm):
 					+' {:7}'.format(package[2])
 					else:
 						print '\t' + colors.BLUE + ver + colors.ENDC + ' : %s' % package		
-
 				
 def graphit(perc):
 	
@@ -116,6 +115,7 @@ def graphit(perc):
 			
 					
 def get_rhev_info(target, check_db=False):
+
 	# logic to determine hyp/manager
 	rhevm = find_rpm(target, 'rhevm')
 	if 'not' in rhevm:
@@ -125,7 +125,7 @@ def get_rhev_info(target, check_db=False):
 	if manager:
 		get_rhevm_info(target, check_db)
 	else:
-		get_rhev_hyp_info(target)
+		rhevh.get_rhev_hyp_info(target)
 
 
 def get_main(**kwargs):

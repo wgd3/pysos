@@ -1,1 +1,3 @@
+import findrpm
+import getstats
 
