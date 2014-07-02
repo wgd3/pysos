@@ -52,7 +52,6 @@ parser.add_argument('-r', "--rhev", action="store_true", help='Print RHEV Inform
 parser.add_argument("--db", action="store_true", help = 'Print RHEV DB information')
 
 
-args = parser.parse_args()
 
 class colors:
     HEADER = '\033[95m'
@@ -180,12 +179,14 @@ def get_main(**kwargs):
 	if  kwargs['check']:
 		check_installed(target, kwargs['check'])
 	
-target = args.target[0]
-if target == '/':
+if __name__ == '__main__':
+  args = parser.parse_args()
+  target = args.target[0]
+  if target == '/':
 	local = True
-else:
+  else:
 	local = False
-if not target.endswith('/'):
+  if not target.endswith('/'):
 	target = target + '/'	
 
-get_main(**vars(args))
+  get_main(**vars(args))
