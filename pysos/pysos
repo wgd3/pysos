@@ -2,7 +2,7 @@
 # 
 # 
 # pysos written by Jake Hunsaker <jhunsaker@redhat.com>
-# rhevlcbridge library  and get_rhevm_info() written by Wallace Daniel
+# rhevlcbridge library written by Wallace Daniel
 #
 #
 #    This program is free software: you can redistribute it and/or modify
@@ -15,8 +15,6 @@
 #    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
 #    General Public License <gnu.org/licenses/gpl.html> for more details.
 #
-from __future__ import division
-from rhevlcbridge import *
 import argparse
 from opsys import *
 from rhev import *
@@ -48,37 +46,6 @@ parser.add_argument('-t', "--test", action="store_true")
 
 parser.add_argument('-r', "--rhev", action="store_true", help='Print RHEV Information')
 parser.add_argument("--db", action="store_true", help = 'Print RHEV DB information')
-
-def check_installed(target, rpm):
-	print colors.SECTION + 'Package Check' + colors.ENDC
-	print ''
-	
-	if not os.path.isfile(target + 'installed-rpms'):
-		print colors.RED + colors.BOLD + '\t Installed RPMs file not found' + colors.ENDC
-		return False
-	
-	if rpm == 'all':
-		with open(target + 'installed-rpms', 'r') as rfile:
-			for line in rfile:
-				ver = line.split()[0]
-				package = check_rpm_ver(ver, all_test=True)
-				if package:
-					print '\t' + colors.RED + colors.BOLD +' {:10} : '.format(ver) + colors.ENDC +' {:20}'.format(package[0]) \
-					+ colors.WHITE + '  KCS :' + colors.ENDC +' {:7}'.format(package[1]) + colors.WHITE + '  BZ :' + colors.ENDC \
-					+' {:7}'.format(package[2])
-	else:
-		with open(target + 'installed-rpms', 'r') as rfile:
-			for line in rfile:
-				if rpm in line:
-					ver = line.split()[0]
-					package = check_rpm_ver(ver, stand_alone=True)
-					if type(package) is list:
-						print '\t' + colors.RED + colors.BOLD +'{:10} : '.format(ver) + colors.ENDC +' {:20}'.format(package[0]) \
-					+ colors.WHITE + '  KCS :' + colors.ENDC +' {:7}'.format(package[1]) + colors.WHITE + '  BZ :' + colors.ENDC \
-					+' {:7}'.format(package[2])
-					else:
-						print '\t' + colors.BLUE + ver + colors.ENDC + ' : %s' % package
-			
 					
 def get_rhev_info(target, check_db=False):
 
@@ -94,7 +61,7 @@ def get_rhev_info(target, check_db=False):
 		rhevh.get_rhev_hyp_info(target)
 
 
-def get_main(**kwargs):
+def do_stuff(**kwargs):
 	if kwargs['getall']:
 		kwargs['os'] = True
 		kwargs['memory'] = True
@@ -156,4 +123,4 @@ if __name__ == '__main__':
   if not target.endswith('/'):
 	target = target + '/'	
 
-  get_main(**vars(args))
+  do_stuff(**vars(args))
