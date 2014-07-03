@@ -1,3 +1,7 @@
+import os, re
+from ringinfo import *
+from config import *
+
 def get_ethtool_info(target):
 	# get list of all devices
 	dev_list = []

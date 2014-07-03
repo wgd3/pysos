@@ -1,3 +1,11 @@
+from rhn import *
+from kernel import *
+from selcheck import *
+from loadavg import *
+from config import *
+from getstats import *
+import os, time, textwrap
+
 def get_os_info(target, local): 
 	
 	rhnserver = get_rhn(target, local)

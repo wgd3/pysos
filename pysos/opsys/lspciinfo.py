@@ -1,3 +1,7 @@
+import os, re
+from config import *
+from collections import defaultdict
+
 def get_lspci_info(target, local):
 	devices = defaultdict(list)
 	counter = 0

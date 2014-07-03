@@ -1,3 +1,8 @@
+import os, re
+from itertools import groupby
+from collections import defaultdict
+from config import *
+
 def get_ip_info(target, local=False):
 	interfaces = {}
 	int_info = defaultdict(list)

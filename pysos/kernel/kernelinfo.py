@@ -1,3 +1,22 @@
+from opsys import *
+from opsys.chkconfig import *
+from config import *
+import os
+from sysctls import *
+
+def check_initrd(target):
+	initrd = colors.WARN + 'initrd.img not found in sos_commands/bootloader/ls_-laR_.boot' + colors.ENDC
+	if not os.path.isfile(target + 'sos_commands/bootloader/ls_-laR_.boot'):
+		initrd = colors.WARN + 'missing ' + target +'sos_commands/bootloader/ls_-laR_.boot' + colors.ENDC
+		return str(initrd)
+		
+	with open(target + 'sos_commands/bootloader/ls_-laR_.boot') as kfile:
+		for line in kfile:
+			if 'initrd' in line:
+				initrd = line.split()[-1]
+				return initrd
+	return initrd
+
 def get_kernel_info(target, local):
 	
 	# get kexec version, service enablement, initrd.img, kdump path
@@ -40,7 +59,7 @@ def get_kernel_info(target, local):
 							break
 					elif len(line.split()) == 6:
 						if line.split()[5] == mount_at:	
-							size = str((round((int(line.split()[1]) / 1048576), 0)) + ' GB')
+							size = str(str(round((int(line.split()[1]) / 1048576), 0)) + ' GB')
 							
 							break	
 

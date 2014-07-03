@@ -1,3 +1,6 @@
+import os, re, textwrap
+from config import *
+
 def get_cpu_info(target):
 	if os.path.isfile(target + 'proc/cpuinfo'):
 		processors = int()

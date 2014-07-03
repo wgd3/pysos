@@ -1,3 +1,5 @@
+from config import *
+
 def get_loadavg(target, cpus, local):
 	
 	if local:

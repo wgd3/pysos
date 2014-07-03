@@ -1,3 +1,6 @@
+import os, re
+from config import *
+
 def get_bios_info(target, local):
 	total_cores = 0
 	total_threads = 0

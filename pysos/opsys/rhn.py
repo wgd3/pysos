@@ -1,3 +1,4 @@
+import os, re
 def get_rhn(target, local):
 	if os.path.isfile(target + 'etc/sysconfig/rhn/up2date'):
 		with open(target + 'etc/sysconfig/rhn/up2date', 'r') as rhnfile:

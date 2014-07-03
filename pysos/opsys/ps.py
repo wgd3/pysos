@@ -1,3 +1,6 @@
+from collections import defaultdict
+from config import *
+
 def get_ps_info(target):
 	print colors.HEADER_BOLD + 'PS' + colors.ENDC
 	retval = parse_ps_file(target)	

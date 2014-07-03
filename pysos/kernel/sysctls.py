@@ -1,3 +1,6 @@
+import os
+from config import *
+
 def find_sysctl(target, sysctl):
 	sysctls = []
 	if os.path.isfile(target +'sos_commands/kernel/sysctl_-a'):

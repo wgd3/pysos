@@ -1,3 +1,6 @@
+import os,re
+from config import *
+
 def check_mem(target, scope):				
 	# check proc/meminfo for mem-related stats.
 	# if scope is 'all', grab everything we care about at once
@@ -47,6 +50,18 @@ def check_mem(target, scope):
 	else:
 		# need to build out selective mem check, if needed
 		pass
+
+def graphit(perc):
+	
+	# general graphing function, needs to be fed a percentage. 
+	tick = u"\u25C6"
+	empty = u"\u25C7"	
+	filled = round(40 * (perc / 100))
+	nofill = 40 - filled
+	percf = '%.2f' %perc + ' %'
+	graph = tick * int(filled) + empty * int(nofill) + '  %7s' %percf
+	return graph
+
 		
 def get_mem_info(target):
 	

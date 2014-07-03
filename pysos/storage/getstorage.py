@@ -1,3 +1,7 @@
+import os, re
+from collections import defaultdict
+from config import *
+
 def get_storage_info(target, local):
 	disks = defaultdict(list)
 	total_space = 0

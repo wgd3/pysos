@@ -1,3 +1,6 @@
+import os
+from config import *
+
 def get_bonding_info(target):
 	bond_devs = {}
 	for root, dirs, files in os.walk(target + 'proc/net/bonding'):

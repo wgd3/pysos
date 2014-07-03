@@ -1,3 +1,5 @@
+import os, re, datetime
+from config import colors
 def sel_check(target):
 	# checking for how SELinux starts
 	if os.path.isfile(target + 'etc/selinux/config'):

@@ -1,3 +1,5 @@
+import os
+from config import *
 def find_chkconfig(target, service):
 	
 	# search for specific config states for a given service

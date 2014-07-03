@@ -1,3 +1,5 @@
+import os
 from opsys import *
-import rhevh
-import rhevm
+from rhevh import *
+from rhevm import *
+from config import *

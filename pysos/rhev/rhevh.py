@@ -1,3 +1,6 @@
+from opsys import *
+import os
+
 def get_rhev_hyp_info(target):
 		packages = {}
 		rpm_check = {}

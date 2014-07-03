@@ -1,3 +1,5 @@
+import os
+
 def find_rpm(target, rpm, local=False):
 	# from here we will pull specific targets for installed RPMS
 	rpm_state = False

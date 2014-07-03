@@ -1,3 +1,7 @@
+from config import colors 
+from opsys import *
+
+
 def get_rhevm_info(target, check_db):
 	# grab / print basic information first
 	print colors.SECTION + colors.BOLD + "RHEV-M Information" + colors.ENDC
@@ -221,47 +225,51 @@ def parse_engine_log(logFile):
 	print ''
 	
 	for x in range(1,4):
-		lastLine = len(errorLines)-x
-		errorLine = errorLines[lastLine]
-		errorProperties = errorLine.split(" ")
-		'''
-		0 - Date
-		1 - Time
-		3 - Command run
-		7+ - Message
-		'''
-		
-		print colors.HEADER_BOLD + "\t Time Stamp: " + colors.ENDC + errorProperties[0] + " " + errorProperties[1]	
-		print colors.HEADER_BOLD + "\t Command: " + colors.ENDC + errorProperties[3].lstrip("[").rstrip("]")
-		
-		# Trying to hack this since messages seem to vary in length - basing on last capital letter. deal with it
-		errMessParts =  errorProperties[7:]
-		errorMessage = ""
-		for p in errMessParts:
-			#print p
-			for c in p:
-				if c in "ABCDEFGHIJKLMNOPQRSTUVWXYZ":
-					#print errMessParts.index(p)
-					index = errMessParts.index(p)
-					errorMessage = ' '.join(errMessParts[index:]).replace("\n","")
-					#print errorMessage
+		try:
+			lastLine = len(errorLines)-x
+			errorLine = errorLines[lastLine]
+			errorProperties = errorLine.split(" ")
+			'''
+			0 - Date
+			1 - Time
+			3 - Command run
+			7+ - Message
+			'''
 			
-		print colors.HEADER_BOLD + "\t Message: " + colors.ENDC  + errorMessage
-	
-		singleOccurance = True
-		occurances = 0
-		for line in lines:
-			if ' '.join(errorProperties[7:]) in line:
-				occurances += 1
-		if occurances > 1:
-			singleOccurance = False
-		
-		if singleOccurance:
-			print colors.HEADER_BOLD + "\t Only occurance of this error: " + colors.WHITE + "Yes" + colors.ENDC
-		else:
-			print colors.HEADER_BOLD + "\t Only occurance of this error: " + colors.ENDC + colors.RED + "No. Errors appear " + str(occurances) + " times in engine.log starting at " + ' '.join(errorLines[0].split(" ")[0:2]) + colors.ENDC
+			print colors.HEADER_BOLD + "\t Time Stamp: " + colors.ENDC + errorProperties[0] + " " + errorProperties[1]	
+			print colors.HEADER_BOLD + "\t Command: " + colors.ENDC + errorProperties[3].lstrip("[").rstrip("]")
 			
-		print ""
+			# Trying to hack this since messages seem to vary in length - basing on last capital letter. deal with it
+			errMessParts =  errorProperties[7:]
+			errorMessage = ""
+			for p in errMessParts:
+				#print p
+				for c in p:
+					if c in "ABCDEFGHIJKLMNOPQRSTUVWXYZ":
+						#print errMessParts.index(p)
+						index = errMessParts.index(p)
+						errorMessage = ' '.join(errMessParts[index:]).replace("\n","")
+						#print errorMessage
+				
+			print colors.HEADER_BOLD + "\t Message: " + colors.ENDC  + errorMessage
+		
+			singleOccurance = True
+			occurances = 0
+			for line in lines:
+				if ' '.join(errorProperties[7:]) in line:
+					occurances += 1
+			if occurances > 1:
+				singleOccurance = False
+			
+			if singleOccurance:
+				print colors.HEADER_BOLD + "\t Only occurance of this error: " + colors.WHITE + "Yes" + colors.ENDC
+			else:
+				print colors.HEADER_BOLD + "\t Only occurance of this error: " + colors.ENDC + colors.RED + "No. Errors appear " + str(occurances) + " times in engine.log starting at " + ' '.join(errorLines[0].split(" ")[0:2]) + colors.ENDC
+				
+			print ""
+		
+		except:
+			pass
 
 def parse_messages_log(logFile):
 	print ""

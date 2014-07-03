@@ -1,3 +1,5 @@
+import os
+
 def get_ring_info(target, device):
 	rx = ''
 	rxjumbo = ''

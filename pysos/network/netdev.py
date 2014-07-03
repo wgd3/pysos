@@ -1,3 +1,5 @@
+from config import *
+
 def get_netdev_info(target):
 	dev_info = {}
 	with open(target +'proc/net/dev', 'r') as devfile:
