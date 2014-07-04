@@ -7,34 +7,32 @@ def get_rhev_hyp_info(target):
 		vm_list = []
 		running_vms = 0
 		warn_count = 0
-		rhevh_release = getstats.get_status(target, 'release')
-		packages['kernel'] = find_rpm(target, 'kernel')
+		rhevh_release = get_status(target, 'release')
+		packages['kernel'] = get_status(target, 'kernel').split()[2]
+		
 		# Find package versions
 		packages['vdsm'] = find_rpm(target, 'vdsm')
 		packages['libvirt'] = find_rpm(target, 'libvirt')
 		packages['spice'] = find_rpm(target, 'spice-server')
-		packages['qemu_img'] = find_rpm(target, 'qemu-img-')
-		packages['qemu_kvm'] = find_rpm(target, 'qemu-kvm-')
+		packages['qemu_img'] = find_rpm(target, 'qemu-img-rhev')
+		packages['qemu_kvm'] = find_rpm(target, 'qemu-kvm-rhev')
 		packages['qemu_tools'] = find_rpm(target, 'qemu-kvm-rhev-tools')
-		# Check RPM versions. Has to be a better way to do this
-
-		rpm_check['kernel'] = check_rpm_ver(packages['kernel'])
-		rpm_check['vdsm'] = check_rpm_ver(packages['vdsm'])
-		rpm_check['libvirt'] = check_rpm_ver(packages['libvirt'])
-		rpm_check['spice'] = check_rpm_ver(packages['spice'])
-		rpm_check['qemu_img'] = check_rpm_ver(packages['qemu_img'])
-		rpm_check['qemu_kvm'] = check_rpm_ver(packages['qemu_kvm'])
-		rpm_check['qemu_tool'] = check_rpm_ver(packages['qemu_tools'])
 		
-				
+		# Check RPM versions.
+		
+		for each in packages:
+			rpm_check[each] = check_rpm_ver(packages[each])
+		
+		# Format package results				
 		for item in packages:
 			if 'not installed' in packages[item]:
 				packages[item] = 'Not Installed'
 			else:
 				index = str(packages[item]).find('.')
-				index2 = str(packages[item]).find('.el')
+				index2 = str(packages[item]).find('.x86')
 				packages[item] = str(packages[item])[index-1:index2]
 
+		# check pysos-web for known hypervisor ISO issues
 		if 'Hypervisor' in rhevh_release:
 			packages['hypervisor'] = rhevh_release[(rhevh_release.find('(')) +1:rhevh_release.find('.el6)')]
 			rpm_check['hypervisor'] = check_rpm_ver('', name='rhev-hypervisor', ver=packages['hypervisor'])	
@@ -56,17 +54,18 @@ def get_rhev_hyp_info(target):
 						vm_cpu = line.split()[2]
 						vm_list.append([vm_name, vm_cpu, vm_mem])
 		
+		
 		print colors.SECTION + 'Virtualization'
 		print colors.HEADER_BOLD + '\t Release    : ' + colors.ENDC + rhevh_release
 		print colors.HEADER_BOLD + '\t Kernel     : ' + colors.ENDC + packages['kernel']
 		print ''
 		print colors.HEADER_BOLD + '\t vdsm       : ' + colors.ENDC + packages['vdsm'] + '\t' + \
-		colors.HEADER_BOLD + '\t libvirt    : ' + colors.ENDC + packages['libvirt']
+		colors.HEADER_BOLD + '\t\t libvirt    : ' + colors.ENDC + packages['libvirt']
 		print colors.HEADER_BOLD + '\t SPICE      : ' + colors.ENDC + packages['spice'] + '\t\t' + \
 		colors.HEADER_BOLD + '\t RHEV tools : ' + colors.ENDC + packages['qemu_tools']
 		print colors.HEADER_BOLD + '\t qemu-img   : ' + colors.ENDC + packages['qemu_img']+ '\t' + \
 		colors.HEADER_BOLD + '\t qemu-kvm   : ' + colors.ENDC + packages['qemu_kvm']
-		print '\n'
+		print ''
 
 		if warn_count > 0:
 			print colors.RED + colors.BOLD + '\t WARNING : ' + colors.ENDC 
@@ -93,6 +92,6 @@ def get_rhev_hyp_info(target):
 
 def print_vms(to_print):
 	try:
-		return colors.GREEN + ' {:12} '.format(to_print[0][:12]) + colors.ENDC + '({} / {}GB)'.format(to_print[1], to_print[2])
+		return colors.GREEN + ' {:12} '.format(to_print[0][:12]) + colors.ENDC + '({:4}% / {:4}GB)'.format(to_print[1], to_print[2])
 	except:
 		return ''
