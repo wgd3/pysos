@@ -53,16 +53,21 @@ def get_lspci_info(target, local):
 	except:
 		pass
 		
-	print colors.SECTION + 'LSPCI' + colors.ENDC
+	print colors.SECTION + colors.BOLD + 'LSPCI' + colors.ENDC
 	print ''
 	print colors.HEADER_BOLD + '\t Physical Devices' + colors.ENDC
 	linecolor = colors.BLUE + '\t\t'
 	for item in sorted(devices):
 		value = devices[item]
 		if 'Serial Attached' in value[0]:
-				value[0] = 'SAS'
+			value[0] = 'SAS'
+		if 'Lights-Out' in value[1]:
+			value[0] = 'IPMI'
+			value[2] = '1'
+			value[1] = str(value[1])[0:str(value[1]).find('Lights-Out')+10]
+			
 		# only display hardware devices we care about. Can expand this as we need to
-		show_these = ['VGA', 'Ethernet', 'Network', 'Realtek', 'SCSI', 'SAS']
+		show_these = ['VGA', 'Ethernet', 'Network', 'Realtek', 'SCSI', 'SAS', 'IPMI']
 		for item in show_these:
 			if item in value[0]:
 				print linecolor +  '{:<10} '.format(value[0].split()[0]) + colors.WHITE + '{:^1} ports '.format(value[2]) + colors.ENDC + value[1]
