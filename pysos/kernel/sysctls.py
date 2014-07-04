@@ -8,7 +8,9 @@ def find_sysctl(target, sysctl):
 			for line in sysfile:
 				if sysctl in line:
 					sysctls.append(line.rstrip('\n'))
-	return sysctls
+		return sysctls
+	else:
+		return False
 
 def get_sysctl_info(target):
 	
@@ -28,10 +30,13 @@ def get_sysctl_info(target):
 	, ['vm', vm_sysctls, vm_prints]):
 		print colors.HEADER_BOLD + '\t %s' %section[0] + colors.ENDC
 		
-		for item in section[1]:
-			for each in section[2]:
-				if each in item:
-					item = str(item)
-					indexname = item.find('.')
-					index = item.find('=')
-					print colors.BLUE + colors.BOLD + '\t %33s' %item[indexname+1:index-1] + colors.ENDC + ' = ' + item[index+1:len(item)]
+		if section[1]:
+			for item in section[1]:
+				for each in section[2]:
+					if each in item:
+						item = str(item)
+						indexname = item.find('.')
+						index = item.find('=')
+						print colors.BLUE + colors.BOLD + '\t %33s' %item[indexname+1:index-1] + colors.ENDC + ' = ' + item[index+1:len(item)]
+		else:
+			print colors.WARN + '\t\t Could not parse sysctls - sos_commands/kernel/sysctl_-a not found' + colors.ENDC
