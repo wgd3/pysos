@@ -15,7 +15,7 @@ def get_cpu_info(target):
 				if 'model name' in line:
 					cpu_model = line[index+2:len(line)].rstrip('\n')
 					if 'QEMU' in cpu_model:
-						phys_cpus = '0 [virt] '
+						phys_cpus = '0 [KVM] '
 						core_count = processors
 						threads = 1
 				if line.startswith('physical'):
@@ -26,10 +26,17 @@ def get_cpu_info(target):
 					threads = line[index+2:len(line)].rstrip('\n')
 				if line.startswith('flags'):
 					cpu_flags = line[index+2:len(line)].rstrip('\n')
+		
+		virt_flags = ['vmx', 'svm', 'nx']
+		for vf in virt_flags:
+			pattern = re.compile(vf)
+			cpu_flags = pattern.sub(colors.WHITE + vf + colors.ENDC, cpu_flags)
+		
+		
 		print colors.SECTION + colors.BOLD + 'CPU' + colors.ENDC
 		print colors.WHITE + colors.BOLD + '\t\t %s logical processors' %processors + colors.ENDC
 		print '\t\t %s %s processors' %(phys_cpus, cpu_model)
 		print '\t\t %s cores / %s threads per physical processor' %(core_count, threads)
-		print '\t\t flags : ' + textwrap.fill(cpu_flags, 80, subsequent_indent='%25s' % ' ')
+		print '\t\t flags : ' + textwrap.fill(cpu_flags, 90, subsequent_indent='\t\t\t ')
 	else:
 		print 'Error parsing proc/cpuinfo'
