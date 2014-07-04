@@ -12,6 +12,7 @@ def get_loadavg(target, cpus, local):
 		load_file = mem_file.name
 	else:
 		load_file = target + 'uptime'
+		
 	# get raw loadavg report from sosreport
 	with open(load_file, 'r') as lfile:
 		load = lfile.readline()
@@ -23,7 +24,12 @@ def get_loadavg(target, cpus, local):
 	for item in loads:
 		index = loads.index(item)
 		loadperc = (float(item) / cpus) * 100
-		loads[index] = (loads[index] + colors.DBLUE + '(%.2f%%)' + colors.ENDC) %loadperc
+		if loadperc < 75:
+			loads[index] = (loads[index] + colors.DBLUE + '(%.2f%%)' + colors.ENDC) %loadperc
+		elif loadperc > 74 and loadperc < 100:
+			loads[index] = (loads[index] + colors.WARN + '(%.2f%%)' + colors.ENDC) %loadperc
+		else:
+			loads[index] = (loads[index] + colors.RED + colors.BOLD + '(%.2f%%)' + colors.ENDC) %loadperc
 	return str(loads[0] + loads[1] + loads[2])
 	
 	try:
