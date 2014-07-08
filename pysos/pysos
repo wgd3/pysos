@@ -43,6 +43,7 @@ parser.add_argument('-s', "--sysctl", action="store_true", help='Print all sysct
 parser.add_argument('-p', "--ps", action="store_true", help='Print ps information')
 parser.add_argument("--check", help='Check package for known bugs')
 parser.add_argument('-r', "--rhev", action="store_true", help='Print RHEV Information')
+parser.add_argument('-y', "--yum", action="store_true", help='Print yum/RHN information')
 parser.add_argument("--db", action="store_true", help = 'Print RHEV DB information')
 
 								
@@ -111,6 +112,8 @@ def do_stuff(**kwargs):
 		get_ps_info(target)
 	if  kwargs['check']:
 		check_installed(target, kwargs['check'], local)
+	if kwargs['yum']:
+		get_yum_info(target, local)
 	
 if __name__ == '__main__':
   args = parser.parse_args()
