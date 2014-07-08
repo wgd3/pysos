@@ -1,8 +1,13 @@
 import os, re, datetime
 from config import colors
-def sel_check(target):
+
+def sel_check(target, local):
 	# checking for how SELinux starts
-	if os.path.isfile(target + 'etc/selinux/config'):
+	if not local:
+		selfile = target + 'etc/selinux/config'
+	else:
+		selfile = '/etc/selinux/config'
+	if os.path.isfile(selfile):
 		with open(target + 'etc/selinux/config', 'r') as selfile:
 			for line in selfile:
 				if re.match("SELINUX=", line):
