@@ -11,6 +11,8 @@ def get_os_info(target, local):
 	rhnserver = get_rhn(target, local)
 	tainted = taint_check(target)		
 	selstate = sel_check(target)
+	loadavg = get_loadavg(target, num_cpus, local)	
+	sys = get_status(target, 'date', local)	
 	
 	# load info from proc/stat - may separate this out later.
 	with open(target + 'proc/stat', 'r') as statfile:
@@ -27,11 +29,9 @@ def get_os_info(target, local):
 			if re.match("procs_running", line):
 				run_procs = line.split(" ")[1].rstrip('\n')
 		if not boottime:
-			boottime = colors.RED + 'Could not find boot time' + colors.ENDC
+			boottime = colors.RED + 'Could not find boot time' + colors.ENDC		
 	
-
-	loadavg = get_loadavg(target, num_cpus, local)	
-	sys = get_status(target, 'date', local)			
+	
 	# from sys time and boot time calc uptime rather than butcher the uptime string more
 	if boottime and btime and ('not found' not in sys):         
 											# Python strptime only works for timezone the 
@@ -42,7 +42,7 @@ def get_os_info(target, local):
 	else:
 		uptime = colors.RED + colors.BOLD + 'Cannot determine uptime' + colors.ENDC
 
-	# Print it all pretty like.
+
 	print colors.SECTION + colors.BOLD + "OS " + colors.ENDC
 	print colors.HEADER_BOLD + '\t Hostname  : ' + colors.ENDC + get_status(target, 'hostname', local)
 	print colors.HEADER_BOLD +  '\t Release   : ' + colors.ENDC + get_status(target, 'release', local)
@@ -52,7 +52,6 @@ def get_os_info(target, local):
 	
 	print colors.HEADER_BOLD + '\t Kernel    : ' + colors.ENDC
 	print '\t   ' + colors.BLUE + colors.BOLD + 'Booted kernel  : ' + colors.ENDC + str(get_status(target, 'kernel', local)).split(" ")[2]
-	print '\t   ' + colors.BLUE + colors.BOLD + 'GRUB default   : '
 	print '\t   ' + colors.BLUE + colors.BOLD + 'Booted cmdline : ' + colors.ENDC
 	print '%15s' % ' ' + textwrap.fill(get_status(target, 'cmdline', local), 90, subsequent_indent='%15s' % ' ')
 	print '\t   ' + colors.BLUE + colors.BOLD + 'Taint-check    : ' + colors.ENDC + str(tainted)
