@@ -104,7 +104,7 @@ def do_stuff(**kwargs):
 		get_lspci_info(target, local)
 	if  kwargs['rhev']:
 		if kwargs['db']:
-			get_rhev_info(target, db=True)
+			get_rhevm_info(target, check_db=True)
 		else:
 			get_rhev_info(target)
 	if  kwargs['disk']:
