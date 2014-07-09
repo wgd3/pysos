@@ -22,6 +22,7 @@ from rhev import *
 from kernel import *
 from network import *
 from storage import *
+from rhevlcbridge import *
 
 # switches
 parser = argparse.ArgumentParser(description='Make a sosreport pretty.')
