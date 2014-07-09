@@ -1,0 +1,128 @@
+#!/usr/bin/python
+# 
+# 
+# pysos written by Jake Hunsaker <jhunsaker@redhat.com>
+# rhevlcbridge library written by Wallace Daniel
+#
+#
+#    This program is free software: you can redistribute it and/or modify
+#    it under the terms of the GNU General Public License as published by
+#    the Free Software Foundation, either version 3 of the License, or
+#    (at your option) any later version.
+#
+#    This program is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+#    General Public License <gnu.org/licenses/gpl.html> for more details.
+#
+from __future__ import division
+import argparse
+from opsys import *
+from rhev import *
+from kernel import *
+from network import *
+from storage import *
+
+# switches
+parser = argparse.ArgumentParser(description='Make a sosreport pretty.')
+parser.add_argument('target', nargs='+', help='Target directory, aka the sosreport root. Use "/" to run locally')
+parser.add_argument('-a', "--getall", action="store_true", help='Print all information (RHEV excluded)')
+parser.add_argument('-b', "--bios", action="store_true", help='Print BIOS and dmidecode information')
+parser.add_argument('-o', "--os", action="store_true", help='Prints OS information')
+parser.add_argument('-k', "--kdump", action="store_true", help="Prints kdump information")
+parser.add_argument('-c', "--cpu", action="store_true", help='Print CPU information ONLY')
+parser.add_argument('-m', "--memory", action="store_true", help='Prints memory information')
+parser.add_argument('-d', "--disk", action="store_true", help='Print /proc/partition information')
+parser.add_argument('-l', "--lspci", action="store_true", help='Print lspci information')
+parser.add_argument('-e', '--ethtool', action="store_true", help='Prints ethtool information')
+parser.add_argument('-g', "--bonding", action="store_true", help='Print bonding information')
+parser.add_argument('-i', "--ip", action="store_true", help='Print IP information')
+parser.add_argument('-n', "--netdev", action="store_true", help='Print proc/net/dev information')
+parser.add_argument("--net", action="store_true", help='Alias for --ethtool, --bonding, --ip, --netdev')
+parser.add_argument('-s', "--sysctl", action="store_true", help='Print all sysctl information')
+parser.add_argument('-p', "--ps", action="store_true", help='Print ps information')
+parser.add_argument("--check", help='Check package for known bugs')
+parser.add_argument('-r', "--rhev", action="store_true", help='Print RHEV Information')
+parser.add_argument('-y', "--yum", action="store_true", help='Print yum/RHN information')
+parser.add_argument("--db", action="store_true", help = 'Print RHEV DB information')
+
+								
+def get_rhev_info(target, check_db=False):
+
+	# logic to determine hyp/manager
+	rhevm = find_rpm(target, 'rhevm')
+	if 'not' in rhevm:
+		manager = False
+	else:
+		manager = True
+	if manager:
+		get_rhevm_info(target, check_db)
+	else:
+		rhevh.get_rhev_hyp_info(target)
+
+
+def do_stuff(**kwargs):
+	if kwargs['getall']:
+		kwargs['os'] = True
+		kwargs['memory'] = True
+		kwargs['kdump'] = True
+		kwargs['cpu'] = True
+		kwargs['sysctl'] = True
+		kwargs['ip'] = True
+		kwargs['bonding'] = True
+		kwargs['netdev']= True
+		kwargs['ethtool'] = True
+		kwargs['bios'] = True
+		kwargs['disk'] = True
+	if kwargs['net']:
+		kwargs['ip'] = True
+		kwargs['bonding'] = True
+		kwargs['eth'] = True
+		kwargs['netdev'] = True
+	if kwargs['os']:
+		get_os_info(target, local)
+	if kwargs['memory']:
+		get_mem_info(target)
+	if  kwargs['bios']:
+		get_bios_info(target, local)
+	if  kwargs['kdump']:
+		get_kernel_info(target, local)
+	if  kwargs['cpu']:
+		get_cpu_info(target)
+	if  kwargs['sysctl']:
+		get_sysctl_info(target)
+	if  kwargs['ip']:
+		get_ip_info(target, local)
+	if  kwargs['bonding']:
+		get_bonding_info(target)
+	if  kwargs['ethtool']:
+		get_ethtool_info(target)
+	if  kwargs['netdev']:
+		get_netdev_info(target)
+	if  kwargs['lspci']:
+		get_lspci_info(target, local)
+	if  kwargs['rhev']:
+		if kwargs['db']:
+			get_rhev_info(target, db=True)
+		else:
+			get_rhev_info(target)
+	if  kwargs['disk']:
+		get_storage_info(target, local)
+	if  kwargs['ps']:
+		get_ps_info(target)
+	if  kwargs['check']:
+		check_installed(target, kwargs['check'], local)
+	if kwargs['yum']:
+		get_yum_info(target, local)
+	
+if __name__ == '__main__':
+  args = parser.parse_args()
+  target = args.target[0]
+  if target == '/':
+	local = True
+  else:
+	local = False
+  if not target.endswith('/'):
+	target = target + '/'	
+
+  do_stuff(**vars(args))
