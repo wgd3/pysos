@@ -25,6 +25,8 @@ class Cluster():
             self.name = details[1]
             self.cpu_type = details[3]
             self.dc_uuid = details[11]
+            if len(self.dc_uuid) != 36:
+                self.dc_uuid = details[6] # 3.3 and 3.4 moved this column to the 6th position instead of 11
             self.compat_ver = details[8]
             #print self.dc_uuid
             #print len(self.dc_uuid)

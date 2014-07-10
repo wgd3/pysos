@@ -119,7 +119,8 @@ def rhev_eval_db(dbDir):
             if os.path.isdir(rootDir+"/"+d):
                 hostDirs.append(d)
 
-
+        # creating list of hosts without sosreports
+        missingHostNames = []
 
         for h in host_list:
             for d in dc_list:
@@ -143,9 +144,7 @@ def rhev_eval_db(dbDir):
             for dir in hostDirs:
 
                 names = dir.split("-")
-
-                if names[0] == hostDirName[0]:
-
+                if names[0] == hostDirName[0].lower():  # found a bug where all sosreport folders were lowercase but hostDirName was uppercase
                     # this is a stupid hack, using '..' in the path name. stop being lazy and find a better alternative
                     releaseFile = open(dbDir+"/../"+dir+"/etc/redhat-release")
                     releaseVer = releaseFile.readlines()
@@ -159,10 +158,42 @@ def rhev_eval_db(dbDir):
                         host_release = releaseVer[0].split()[6]
                         h.set_release_ver(host_release)
 
+                    try:
+                        selinux_file = open(dbDir+"/../"+dir+"/sos_commands/selinux/sestatus_-b")
+                        status_line = selinux_file.readlines()[0]    # The first line in this output is always "SELinux status:"
+                        if "SELinux status:" in status_line:    # just to be safe in case this file changes
+                            if "enabled" in status_line:
+                                # selinux was found to be enabled on this host, need to set that on the host object
+                                h.set_selinux("Enabled")
+                            elif "permissive" in status_line or "disabled" in status_line:     # selinux is disabled or doesn't matter
+                                h.set_selinux("Disabled")
+                    except IOError as e:
+                        print '\n\t' + colors.WARN + "Unable to open/find the selinux file: " + e.message + colors.ENDC
+                else:
+                    #print names[0] + " does not match " + hostDirName[0].lower()
+                    curMissHost = hostDirName[0].lower()
+                    curDirName = names[0]
+                    #print "Seeing if " + curMissHost + " is already in the missingHostList..."
+                    if 'database' not in curDirName and 'log' not in curDirName and 'rhevm' not in curDirName:
+                        if curMissHost not in missingHostNames:
+                            #print "\tIt's not, adding."
+                            missingHostNames.append(curMissHost)
+
+
+
 
         print '\n\t' + colors.BOLD + colors.GREEN + '[Hypervisors In All Data Centers]' + colors.ENDC
-        host_table = Table(host_list,"name","uuid","host_dc_name","host_type", "release_ver", "spm_status")
+        host_table = Table(host_list,"name","uuid","host_dc_name","host_type", "release_ver", "spm_status", "selinux")
         host_table.display()
+
+        if len(missingHostNames) > 0:
+            #print str(missingHostNames)
+            print '\n\t' + colors.BOLD + colors.GREEN + '[Hosts with Missing Sosreports]' + colors.ENDC
+            print '\n\t' + colors.WHITE + colors.BOLD + 'NAME'
+            print '\t' + '====' + colors.ENDC
+            for misHost in missingHostNames:
+                print '\t' + colors.BLUE + str(misHost) + colors.ENDC
+            print '\n'
 
 
     else:
