@@ -144,7 +144,9 @@ def rhev_eval_db(dbDir):
             for dir in hostDirs:
 
                 names = dir.split("-")
-                if names[0] == hostDirName[0].lower():  # found a bug where all sosreport folders were lowercase but hostDirName was uppercase
+
+                # found a bug where all sosreport folders were lowercase but hostDirName was uppercase
+                if names[0] == hostDirName[0].lower():
                     # this is a stupid hack, using '..' in the path name. stop being lazy and find a better alternative
                     releaseFile = open(dbDir+"/../"+dir+"/etc/redhat-release")
                     releaseVer = releaseFile.readlines()
@@ -193,7 +195,11 @@ def rhev_eval_db(dbDir):
             print '\t' + '====' + colors.ENDC
             for misHost in missingHostNames:
                 print '\t' + colors.BLUE + str(misHost) + colors.ENDC
-            print '\n'
+
+        print '\n\t' + colors.BOLD + colors.GREEN + '[Tasks In Database]' + colors.ENDC
+        task_list = masterDB.get_tasks()
+        task_table = Table(task_list,"uuid","command_id", "action_type")
+        task_table.display()
 
 
     else:

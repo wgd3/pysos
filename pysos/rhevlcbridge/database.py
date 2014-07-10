@@ -8,6 +8,7 @@ from host import Host  # Surely there is a better way to do this
 from storagedomain import StorageDomain
 from datacenter import DataCenter
 from cluster import Cluster
+from task import Task
 
 
 class Database():
@@ -25,6 +26,7 @@ class Database():
     storage_domains = []
     hosts = []
     clusters = []
+    tasks = []
 
     def __init__(self, dbFile):
         '''
@@ -39,6 +41,8 @@ class Database():
         self.storage_domains = self.gatherStorageDomains()
         self.hosts = self.gatherHosts()
         self.clusters = self.gatherClusters()
+        self.tasks = self.gatherTasks()
+
 
     def get_clusters(self):
         return self.clusters
@@ -59,9 +63,11 @@ class Database():
     def get_storage_domains(self):
         return self.storage_domains
 
-
     def get_hosts(self):
         return self.hosts
+
+    def get_tasks(self):
+        return self.tasks
 
 
     def unpack(self, tarFile, dbDir):
@@ -74,7 +80,8 @@ class Database():
         self.dat_files = ["data_center_dat",
                           "storage_domain_dat",
                           "host_dat",
-                          "cluster_dat"]
+                          "cluster_dat",
+                          "async_tasks_dat"]
 
         #print self.dat_files[0]
         self.dat_files[0] = self.dat_files[0] + "," + self.findDat(" storage_pool ", dbDir + "restore.sql")
@@ -83,6 +90,7 @@ class Database():
         self.dat_files[1] = self.dat_files[1] + "," + self.findDat(" storage_domain_static ", dbDir + "restore.sql")
         self.dat_files[2] = self.dat_files[2] + "," + self.findDat(" vds_static ", dbDir + "restore.sql")
         self.dat_files[3] = self.dat_files[3] + "," + self.findDat(" vds_groups ", dbDir + "restore.sql")
+        self.dat_files[4] = self.dat_files[4] + "," + self.findDat(" async_tasks ", dbDir + "restore.sql")
 
     # print self.dat_files[3]
 
@@ -188,6 +196,23 @@ class Database():
 
         openDat.close()
         return host_list
+
+    def gatherTasks(self):
+
+        task_list = []
+        dat_file = self.dbDir + self.dat_files[4].split(",")[1]
+
+        openDat = open(dat_file, "r")
+
+        lines = openDat.readlines()
+
+        for l in lines:
+            if len(l.split("\t")):
+                newTask = Task(l.split("\t"))
+                task_list.append(newTask)
+
+        openDat.close()
+        return task_list
 
 
     data_centers = property(get_data_centers, None, None, None)
