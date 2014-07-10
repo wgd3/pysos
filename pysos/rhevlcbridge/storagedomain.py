@@ -27,7 +27,7 @@ class StorageDomain():
 			# determine storage medium
 			self.storage_type = details[4]
 			if self.storage_type == "0":
-				self.storage_type = "unknown"
+				self.storage_type = "Local?"
 			elif self.storage_type == "1":
 				self.storage_type = "NFS"
 			elif self.storage_type == "2":

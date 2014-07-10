@@ -19,6 +19,7 @@ class Host():
     spm_status = ""
     releaseVer = "unknown"
     vdsm_ver = ""  # TODO: grab this from the 'rpm_version' column in the vds_dynamic dat file
+    selinux = "Unknown"   # Setting to unknown by default since the variable is set in the rhevm.py file. if the file can't be found or opened, unknown is returned
 
     def __init__(self, csvList):
         """
@@ -84,8 +85,11 @@ class Host():
         del self.releaseVer
 
 
+    def get_selinux(self):
+        return self.selinux
 
-
+    def set_selinux(self, status):
+        self.selinux = status
 
     def isSPM(self, spm_uuid):
         if spm_uuid == self.get_uuid():
