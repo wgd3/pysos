@@ -10,8 +10,7 @@ def get_os_info(target, local):
 	
 	rhnserver = get_rhn(target, local)
 	tainted = taint_check(target)		
-	selstate = sel_check(target)
-	loadavg = get_loadavg(target, num_cpus, local)	
+	selstate = sel_check(target, local)	
 	sys = get_status(target, 'date', local)	
 	
 	# load info from proc/stat - may separate this out later.
@@ -31,7 +30,7 @@ def get_os_info(target, local):
 		if not boottime:
 			boottime = colors.RED + 'Could not find boot time' + colors.ENDC		
 	
-	
+	loadavg = get_loadavg(target, num_cpus, local)
 	# from sys time and boot time calc uptime rather than butcher the uptime string more
 	if boottime and btime and ('not found' not in sys):         
 											# Python strptime only works for timezone the 

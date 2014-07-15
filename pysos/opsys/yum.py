@@ -4,9 +4,7 @@ from config import *
 def get_yum_info(target, local):
 	server = get_rhn(target, local)
 	channels = get_rhn(target, local, channels=True)
-	print channels
-	
-	
+
 	print colors.SECTION + 'Channel Info' + colors.ENDC
 	print ''
 	print colors.HEADER_BOLD + '\t Server   : ' + colors.ENDC + server

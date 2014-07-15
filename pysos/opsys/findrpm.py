@@ -3,7 +3,7 @@ import os
 def find_rpm(target, rpm, local=False):
 	
 	# from here we will pull specific targets for installed RPMS
-	rpm_state = []
+	rpm_state = False
 	if local:
 		import tempfile, subprocess
 		temp_file = tempfile.NamedTemporaryFile(delete=False)
@@ -24,7 +24,7 @@ def find_rpm(target, rpm, local=False):
 					index = line.find('.')
 					this_rpm = line[0:index-2]
 					if this_rpm == rpm:
-						return line.split()[0]
+						rpm_state = line.split()[0]
 			
 		if not rpm_state:
 			return 'not installed'

@@ -15,5 +15,5 @@ from ps import *
 from kernel import *
 from memory import *
 from lspciinfo import *
-
+from yum import *
 

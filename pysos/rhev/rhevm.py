@@ -9,7 +9,7 @@ def get_rhevm_info(target, check_db):
     print '\n'
 
     # Find RHEVM rpm
-    rhevm_ver = find_rpm(target, "rhevm-3")
+    rhevm_ver = find_rpm(target, "rhevm")
     print colors.HEADER_BOLD + "\t Version: " + colors.CYAN+ rhevm_ver + colors.ENDC
 
     rhevm_check = check_rpm_ver(rhevm_ver)

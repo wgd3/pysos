@@ -1,11 +1,19 @@
 import json, urllib2
 
-def check_rpm_ver(rpm, stand_alone=False, all_test=False):
+def check_rpm_ver(rpm, stand_alone=False, all_test=False, name=False, ver=False):
 
-	index = rpm.find('.')
-	rpmname = rpm[0:index-1]
-
-	version = rpm[len(rpmname):len(rpm)]
+	if not name:
+		index = rpm.find('.')
+		rpmname = rpm[0:index-1]
+	else:
+		rpmname = name
+	
+	if not ver:
+		version = rpm[len(rpmname):len(rpm)]
+	
+	else:
+		version = ver
+		
 	base_url = "http://pysosweb-wdaniel.itos.redhat.com/"
 	check_url = base_url + 'check/' + rpmname.strip('-') + '/' + version
 	
