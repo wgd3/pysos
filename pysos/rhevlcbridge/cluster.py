@@ -15,19 +15,59 @@ class Cluster():
     dc_uuid = ""
     compat_ver = ""
 
-    def __init__(self, csvList):
+    schema31 = {
+        "uuid": 0,
+        "name": 1,
+        "cpu_type": 3,
+        "dc_uuid": 11,
+        "compat_ver": 13,
+    }
+    schema32 = {
+        "uuid": 0,
+        "name": 1,
+        "cpu_type": 3,
+        "dc_uuid": 11,
+        "compat_ver": 13,
+    }
+    schema33 = {
+        "uuid": 0,
+        "name": 1,
+        "cpu_type": 3,
+        "dc_uuid": 6,
+        "compat_ver": 8,
+    }
+    schema34 = {
+        "uuid": 0,
+        "name": 1,
+        "cpu_type": 3,
+        "dc_uuid": 6,
+        "compat_ver": 8,
+    }
+
+    def __init__(self, csvList, dbVersion):
         '''
         This constructor assumes it is being passed a comma separated list consisting of all elements in a line from the dat file
         '''
         details = csvList
+
+        current_schema = "3.3"   # arbitrary, just to set a default
+        if dbVersion == "3.1":
+            current_schema = self.schema31
+        elif dbVersion == "3.2":
+            current_schema = self.schema32
+        elif dbVersion == "3.3":
+            current_schema = self.schema33
+        elif dbVersion == "3.4":
+            current_schema = self.schema34
+
         if len(details) > 2:
-            self.uuid = details[0]
-            self.name = details[1]
-            self.cpu_type = details[3]
-            self.dc_uuid = details[11]
+            self.uuid = details[current_schema['uuid']]
+            self.name = details[current_schema['name']]
+            self.cpu_type = details[current_schema['cpu_type']]
+            self.dc_uuid = details[current_schema['dc_uuid']]
             if len(self.dc_uuid) != 36:
                 self.dc_uuid = details[6] # 3.3 and 3.4 moved this column to the 6th position instead of 11
-            self.compat_ver = details[8]
+            self.compat_ver = details[current_schema['compat_ver']]
             #print self.dc_uuid
             #print len(self.dc_uuid)
             if len(self.dc_uuid) != 36:

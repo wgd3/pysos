@@ -5,6 +5,31 @@ class Task():
     status = ""
     command_id = ""
 
+    schema31 = {
+        "uuid": 0,
+        "action_type": 1,
+        "status": 2,
+        "command_id": 7,
+    }
+    schema32 = {
+        "uuid": 0,
+        "action_type": 1,
+        "status": 2,
+        "command_id": 7,
+    }
+    schema33 = {
+        "uuid": 0,
+        "action_type": 1,
+        "status": 2,
+        "command_id": 7,
+    }
+    schema34 = {
+        "uuid": 0,
+        "action_type": 1,
+        "status": 2,
+        "command_id": 7,
+    }
+
     codes = {
         "0": "Unknown",
         "1": "AddVm",
@@ -311,13 +336,25 @@ class Task():
         "3000":	"SetDataOnSession",
     }
 
-    def __init__(self, csvList):
+    def __init__(self, csvList, dbVersion):
 
         details = csvList
+
+        current_schema = "3.3"   # arbitrary, just to set a default
+        if dbVersion == "3.1":
+            current_schema = self.schema31
+        elif dbVersion == "3.2":
+            current_schema = self.schema32
+        elif dbVersion == "3.3":
+            current_schema = self.schema33
+        elif dbVersion == "3.4":
+            current_schema = self.schema34
+
         if len(details) > 2:
-            self.uuid = details[0]
-            self.command_id = details[7]
-            self.action_type = self.codes[details[1]]
+            self.uuid = details[current_schema['uuid']]
+            self.command_id = details[current_schema['command_id']]
+            self.action_type = self.codes[details[current_schema['action_type']]]
+            self.status = details[current_schema['status']]
 
     def get_action_type(self):
         return self.action_type
