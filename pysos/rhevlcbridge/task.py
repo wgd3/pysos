@@ -30,6 +30,15 @@ class Task():
         "command_id": 7,
     }
 
+    statuses = {
+        "0": "Unknown - task doesn't exist",
+        "1": "Init - task hasn't started yet",
+        "2": "Working - task is running",
+        "3": "Finished - task finished successfully",
+        "4": "Aborting - task ended in failure",
+        "5": "Cleaning - clean up due to failure or stopTask request"
+    }
+
     codes = {
         "0": "Unknown",
         "1": "AddVm",
@@ -354,7 +363,8 @@ class Task():
             self.uuid = details[current_schema['uuid']]
             self.command_id = details[current_schema['command_id']]
             self.action_type = self.codes[details[current_schema['action_type']]]
-            self.status = details[current_schema['status']]
+            tempstatus = details[current_schema['status']]
+            self.status = self.statuses[tempstatus]
 
     def get_action_type(self):
         return self.action_type
