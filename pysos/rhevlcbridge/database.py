@@ -27,21 +27,23 @@ class Database():
     hosts = []
     clusters = []
     tasks = []
+    dbVersion = ""
 
-    def __init__(self, dbFile):
+    def __init__(self, dbFile, dbVersion):
         '''
         Constructor
         '''
+        self.dbVersion = dbVersion
         self.dbDir = os.path.dirname(dbFile) + "/"
         tarFile = tarfile.open(dbFile)
         self.unpack(tarFile, self.dbDir)
 
         # Now that we're unpacked, move on to gathering information
-        self.data_centers = self.gatherDataCenters()
-        self.storage_domains = self.gatherStorageDomains()
-        self.hosts = self.gatherHosts()
-        self.clusters = self.gatherClusters()
-        self.tasks = self.gatherTasks()
+        self.data_centers = self.gatherDataCenters(dbVersion)
+        self.storage_domains = self.gatherStorageDomains(dbVersion)
+        self.hosts = self.gatherHosts(dbVersion)
+        self.clusters = self.gatherClusters(dbVersion)
+        self.tasks = self.gatherTasks(dbVersion)
 
 
     def get_clusters(self):
@@ -72,21 +74,16 @@ class Database():
 
     def unpack(self, tarFile, dbDir):
         # Start with extraction
-        # print "Extracting..."
         tarFile.extractall(dbDir)
 
-        # then set most of the needed variables for future functions
-        #print "Setting dat files..."
+        # create list of dat files
         self.dat_files = ["data_center_dat",
                           "storage_domain_dat",
                           "host_dat",
                           "cluster_dat",
                           "async_tasks_dat"]
 
-        #print self.dat_files[0]
         self.dat_files[0] = self.dat_files[0] + "," + self.findDat(" storage_pool ", dbDir + "restore.sql")
-        #print "Found dat file: " + self.dat_files[0]
-        #print "Passing this to the function: " + self.dat_files[0].split(",")[1]
         self.dat_files[1] = self.dat_files[1] + "," + self.findDat(" storage_domain_static ", dbDir + "restore.sql")
         self.dat_files[2] = self.dat_files[2] + "," + self.findDat(" vds_static ", dbDir + "restore.sql")
         self.dat_files[3] = self.dat_files[3] + "," + self.findDat(" vds_groups ", dbDir + "restore.sql")
@@ -96,12 +93,10 @@ class Database():
 
     def findDat(self, table, restFile):
         '''
-        Subroutine to find the dat file name in restore.sql
+        Subroutine to find the .dat file name in restore.sql
         '''
         openFile = open(restFile, "r")
         lines = openFile.readlines()
-
-        # print "Looking for " + table
 
         for n in lines:
             if n.find(table) != -1:
@@ -114,7 +109,7 @@ class Database():
                         return datFileName
 
 
-    def gatherDataCenters(self):
+    def gatherDataCenters(self, dbVersion):
         '''
         This method returns a list of comma-separated details of the Data Center
         '''
@@ -128,13 +123,13 @@ class Database():
 
         for l in lines:
             if len(l.split("\t")) > 1:
-                newDC = DataCenter(l.split("\t"))
+                newDC = DataCenter(l.split("\t"), dbVersion)
                 dc_list.append(newDC)
 
         openDat.close()
         return dc_list
 
-    def gatherStorageDomains(self):
+    def gatherStorageDomains(self, dbVersion):
         '''
         This method returns a list of comma-separated details of the Storage Domains
         '''
@@ -148,13 +143,13 @@ class Database():
         for l in lines:
             if len(l.split("\t")) > 1:
                 #print "Line: " + l
-                newSD = StorageDomain(l.split("\t"))
+                newSD = StorageDomain(l.split("\t"), dbVersion)
                 sd_list.append(newSD)
 
         openDat.close()
         return sd_list
 
-    def gatherClusters(self):
+    def gatherClusters(self, dbVersion):
         '''
         This method returns a list of comma separated details for clusters
         '''
@@ -168,7 +163,7 @@ class Database():
 
         for l in lines:
             if len(l.split("\t")) > 1:
-                newCluster = Cluster(l.split("\t"))
+                newCluster = Cluster(l.split("\t"), dbVersion)
                 #print "New Cluster: " + newCluster.get_dc_uuid()
                 #print "Cluster Name: " + newCluster.get_name()
                 cl_list.append(newCluster)
@@ -176,7 +171,7 @@ class Database():
         openDat.close()
         return cl_list
 
-    def gatherHosts(self):
+    def gatherHosts(self, dbVersion):
         """
         This method returns a list of comma-separated details of the Data Center
         """
@@ -190,14 +185,14 @@ class Database():
         for l in lines:
             if len(l.split("\t")) > 1:
                 #print l.split("\t")
-                newHost = Host(l.split("\t"))
+                newHost = Host(l.split("\t"), dbVersion)
                 #print "New Host Name: " + newHost.get_name()
                 host_list.append(newHost)
 
         openDat.close()
         return host_list
 
-    def gatherTasks(self):
+    def gatherTasks(self, dbVersion):
 
         task_list = []
         dat_file = self.dbDir + self.dat_files[4].split(",")[1]
@@ -207,8 +202,8 @@ class Database():
         lines = openDat.readlines()
 
         for l in lines:
-            if len(l.split("\t")):
-                newTask = Task(l.split("\t"))
+            if len(l.split("\t")) > 1:
+                newTask = Task(l.split("\t"), dbVersion)
                 task_list.append(newTask)
 
         openDat.close()

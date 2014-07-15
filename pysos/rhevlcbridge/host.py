@@ -21,19 +21,62 @@ class Host():
     vdsm_ver = ""  # TODO: grab this from the 'rpm_version' column in the vds_dynamic dat file
     selinux = "Unknown"   # Setting to unknown by default since the variable is set in the rhevm.py file. if the file can't be found or opened, unknown is returned
 
-    def __init__(self, csvList):
+    schema31 = {
+        "uuid": 0,
+        "name": 1,
+        "host_dc_uuid": 6,
+        "ip_addr": 2,
+        "host_name": 4,
+        "host_type": 8
+    }
+    schema32 = {
+        "uuid": 0,
+        "name": 1,
+        "host_dc_uuid": 6,
+        "ip_addr": 2,
+        "host_name": 4,
+        "host_type": 8
+    }
+    schema33 = {
+        "uuid": 0,
+        "name": 1,
+        "host_dc_uuid": 6,
+        "ip_addr": 2,
+        "host_name": 4,
+        "host_type": 8
+    }
+    schema34 = {
+        "uuid": 0,
+        "name": 1,
+        "host_dc_uuid": 6,
+        "ip_addr": 2,
+        "host_name": 4,
+        "host_type": 8
+    }
+
+    def __init__(self, csvList, dbVersion):
         """
         This constructor assumes it is being passed a comma separated list consisting of all elements in a line from the dat file
         """
         details = csvList
 
         if len(details) > 2:
-            self.uuid = details[0]
-            self.name = details[1]
-            self.host_dc_uuid = details[6]
-            self.ip_addr = details[2]
-            self.host_name = details[4]
-            self.host_type = details[8]
+            current_schema = "3.3"   # arbitrary, just to set a default
+            if dbVersion == "3.1":
+                current_schema = self.schema31
+            elif dbVersion == "3.2":
+                current_schema = self.schema32
+            elif dbVersion == "3.3":
+                current_schema = self.schema33
+            elif dbVersion == "3.4":
+                current_schema = self.schema34
+
+            self.uuid = details[current_schema['uuid']]
+            self.name = details[current_schema['name']]
+            self.host_dc_uuid = details[current_schema['host_dc_uuid']]
+            self.ip_addr = details[current_schema['ip_addr']]
+            self.host_name = details[current_schema['host_name']]
+            self.host_type = details[current_schema['host_type']]
             # determine host type from input
             if self.host_type == "0":
                 self.set_host_type("RHEL")

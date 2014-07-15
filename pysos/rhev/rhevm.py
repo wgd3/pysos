@@ -1,6 +1,7 @@
-from config import colors 
+from config import colors
 from opsys import *
 from rhevlcbridge import Database, Cluster, Table, Host, StorageDomain
+
 
 
 def get_rhevm_info(target, check_db):
@@ -53,12 +54,11 @@ def get_rhevm_info(target, check_db):
             # Compensate for 3.0 / 3.x database differences
             if simpleVer == "3.1" or simpleVer == "3.2" or simpleVer == "3.3" or simpleVer == "3.4":
                 # Eval manager before moving on to db analysis
-                rhev_eval_db(dbDir)
+                rhev_eval_db(dbDir, simpleVer)
             elif simpleVer == "3.0":
                 print colors.WARN + "\t Not ready to parse 3.0 databases yet, may not be trustworthy!!" + colors.ENDC
             else:
-                print colors.WARN + "\t Database version could not be found without RPM information." + colors.ENDC
-                rhev_eval_db(dbDir)
+                print colors.WARN + "\t Database version needed for proper analysis" + colors.ENDC
         else:
             pass
 
@@ -71,14 +71,14 @@ def get_rhevm_info(target, check_db):
 
 # Method for evaluating the database for env information
 # This method should expect to be passed the directory containing the database
-def rhev_eval_db(dbDir):
+def rhev_eval_db(dbDir, simpleVer):
 
 
     if os.path.exists(dbDir + "/sos_pgdump.tar"):
         dbTar = dbDir + "/sos_pgdump.tar"
 
 
-        masterDB = Database(dbTar)
+        masterDB = Database(dbTar, simpleVer)
 
         # create DC list
         dc_list = masterDB.get_data_centers()
@@ -161,7 +161,11 @@ def rhev_eval_db(dbDir):
                         h.set_release_ver(host_release)
 
                     try:
-                        selinux_file = open(dbDir+"/../"+dir+"/sos_commands/selinux/sestatus_-b")
+                        selinux_file = ""
+                        if os.path.exists(dbDir+"/../"+dir+"/sos_commands/selinux/sestatus_-b"):
+                            selinux_file = open(dbDir+"/../"+dir+"/sos_commands/selinux/sestatus_-b")
+                        elif os.path.exists(dbDir+"/../"+dir+"/sos_commands/selinux/sestatus"):
+                            selinux_file = open(dbDir+"/../"+dir+"/sos_commands/selinux/sestatus")
                         status_line = selinux_file.readlines()[0]    # The first line in this output is always "SELinux status:"
                         if "SELinux status:" in status_line:    # just to be safe in case this file changes
                             if "enabled" in status_line:
@@ -196,10 +200,13 @@ def rhev_eval_db(dbDir):
             for misHost in missingHostNames:
                 print '\t' + colors.BLUE + str(misHost) + colors.ENDC
 
-        print '\n\t' + colors.BOLD + colors.GREEN + '[Tasks In Database]' + colors.ENDC
         task_list = masterDB.get_tasks()
-        task_table = Table(task_list,"uuid","command_id", "action_type")
-        task_table.display()
+        if len(task_list) > 0:
+            print '\n\t' + colors.BOLD + colors.GREEN + '[Tasks In Database]' + colors.ENDC
+            task_table = Table(task_list, "uuid", "command_id", "action_type", "status")
+            task_table.display()
+        else:
+            print '\n'  # Just to add a newline buffer
 
 
     else:
