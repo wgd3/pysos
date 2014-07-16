@@ -81,13 +81,15 @@ class Database():
                           "storage_domain_dat",
                           "host_dat",
                           "cluster_dat",
-                          "async_tasks_dat"]
+                          "async_tasks_dat",
+                          "host_dynamic_dat"]
 
         self.dat_files[0] = self.dat_files[0] + "," + self.findDat(" storage_pool ", dbDir + "restore.sql")
         self.dat_files[1] = self.dat_files[1] + "," + self.findDat(" storage_domain_static ", dbDir + "restore.sql")
         self.dat_files[2] = self.dat_files[2] + "," + self.findDat(" vds_static ", dbDir + "restore.sql")
         self.dat_files[3] = self.dat_files[3] + "," + self.findDat(" vds_groups ", dbDir + "restore.sql")
         self.dat_files[4] = self.dat_files[4] + "," + self.findDat(" async_tasks ", dbDir + "restore.sql")
+        self.dat_files[5] = self.dat_files[5] + "," + self.findDat(" vds_dynamic ", dbDir + "restore.sql")
 
     # print self.dat_files[3]
 
@@ -176,11 +178,13 @@ class Database():
         This method returns a list of comma-separated details of the Data Center
         """
         host_list = []
-        dat_file = self.dbDir + self.dat_files[2].split(",")[1]
+        static_dat_file = self.dbDir + self.dat_files[2].split(",")[1]
+        dynamic_dat_file = self.dbDir + self.dat_files[5].split(",")[1]
         #print dat_file
-        openDat = open(dat_file, "r")
+        open_static = open(static_dat_file, "r")
+        open_dynamic = open(dynamic_dat_file, "r")
 
-        lines = openDat.readlines()
+        lines = open_static.readlines()
 
         for l in lines:
             if len(l.split("\t")) > 1:
@@ -189,7 +193,16 @@ class Database():
                 #print "New Host Name: " + newHost.get_name()
                 host_list.append(newHost)
 
-        openDat.close()
+        # fill in vds_dynamic information
+        lines = open_dynamic.readlines()
+        for host in host_list:
+            h_uuid = host.get_uuid()
+            for l in lines: # cycle through all lines in vds_dynamic file
+                if h_uuid in l: # if this line correlates to the current host
+                    host.updateHostDynamic(l.split("\t")) # send line to Host method as a list
+
+        open_static.close()
+        open_dynamic.close()
         return host_list
 
     def gatherTasks(self, dbVersion):

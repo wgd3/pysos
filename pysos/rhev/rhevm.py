@@ -189,16 +189,19 @@ def rhev_eval_db(dbDir, simpleVer):
 
 
         print '\n\t' + colors.BOLD + colors.GREEN + '[Hypervisors In All Data Centers]' + colors.ENDC
-        host_table = Table(host_list,"name","uuid","host_dc_name","host_type", "release_ver", "spm_status", "selinux")
+        host_table = Table(host_list,"name","uuid","host_dc_name","host_type", "spm_status", "selinux")
         host_table.display()
+
+        print '\n\t' + colors.BOLD + colors.GREEN + '[RPM Versions on All Hypervisors]' + colors.ENDC
+        host_ver_table = Table(host_list, "name", "host_os", "vdsm_ver", "kvm_ver", "spice_ver", "kernel_ver")
+        host_ver_table.display()
 
         if len(missingHostNames) > 0:
             #print str(missingHostNames)
-            print '\n\t' + colors.BOLD + colors.GREEN + '[Hosts with Missing Sosreports]' + colors.ENDC
-            print '\n\t' + colors.WHITE + colors.BOLD + 'NAME'
-            print '\t' + '====' + colors.ENDC
-            for misHost in missingHostNames:
-                print '\t' + colors.BLUE + str(misHost) + colors.ENDC
+            print '\n\t' + colors.BOLD + colors.WARN + '[Hosts with Missing Sosreports Detected]' + colors.ENDC
+            print '\n\t' + str(missingHostNames)
+            #for misHost in missingHostNames:
+            #    print '\t' + colors.BLUE + str(misHost) + colors.ENDC
 
         task_list = masterDB.get_tasks()
         if len(task_list) > 0:

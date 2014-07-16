@@ -9,6 +9,7 @@ class Host():
     This class will represent hosts in an environment
     '''
 
+    # CHANGED: In this branch I'm moving from the vds_static table to the vds view - a single view with information from both statuc and dynamic tables
     uuid = ""
     name = ""
     host_dc_uuid = ""
@@ -18,8 +19,13 @@ class Host():
     host_type = ""
     spm_status = ""
     releaseVer = "unknown"
-    vdsm_ver = ""  # TODO: grab this from the 'rpm_version' column in the vds_dynamic dat file
+    vdsm_ver = ""
+    host_os = ""
+    kvm_ver = ""
+    spice_ver = ""
+    kernel_ver = ""
     selinux = "Unknown"   # Setting to unknown by default since the variable is set in the rhevm.py file. if the file can't be found or opened, unknown is returned
+    current_scheme = ""
 
     schema31 = {
         "uuid": 0,
@@ -27,7 +33,12 @@ class Host():
         "host_dc_uuid": 6,
         "ip_addr": 2,
         "host_name": 4,
-        "host_type": 8
+        "host_type": 8,
+        "vdsm_ver": 39,
+        "host_os": 27,
+        "kvm_ver": 28,
+        "spice_ver": 29,
+        "kernel_ver": 30
     }
     schema32 = {
         "uuid": 0,
@@ -35,7 +46,12 @@ class Host():
         "host_dc_uuid": 6,
         "ip_addr": 2,
         "host_name": 4,
-        "host_type": 8
+        "host_type": 8,
+        "vdsm_ver": 37,
+        "host_os": 25,
+        "kvm_ver": 26,
+        "spice_ver": 27,
+        "kernel_ver": 28
     }
     schema33 = {
         "uuid": 0,
@@ -43,7 +59,12 @@ class Host():
         "host_dc_uuid": 6,
         "ip_addr": 2,
         "host_name": 4,
-        "host_type": 8
+        "host_type": 8,
+        "vdsm_ver": 38,
+        "host_os": 26,
+        "kvm_ver": 27,
+        "spice_ver": 28,
+        "kernel_ver": 29
     }
     schema34 = {
         "uuid": 0,
@@ -51,7 +72,12 @@ class Host():
         "host_dc_uuid": 6,
         "ip_addr": 2,
         "host_name": 4,
-        "host_type": 8
+        "host_type": 8,
+        "vdsm_ver": 36,
+        "host_os": 25,
+        "kvm_ver": 26,
+        "spice_ver": 27,
+        "kernel_ver": 28
     }
 
     def __init__(self, csvList, dbVersion):
@@ -61,22 +87,22 @@ class Host():
         details = csvList
 
         if len(details) > 2:
-            current_schema = "3.3"   # arbitrary, just to set a default
+            self.current_schema = "3.3"   # arbitrary, just to set a default
             if dbVersion == "3.1":
-                current_schema = self.schema31
+                self.current_schema = self.schema31
             elif dbVersion == "3.2":
-                current_schema = self.schema32
+                self.current_schema = self.schema32
             elif dbVersion == "3.3":
-                current_schema = self.schema33
+                self.current_schema = self.schema33
             elif dbVersion == "3.4":
-                current_schema = self.schema34
+                self.current_schema = self.schema34
 
-            self.uuid = details[current_schema['uuid']]
-            self.name = details[current_schema['name']]
-            self.host_dc_uuid = details[current_schema['host_dc_uuid']]
-            self.ip_addr = details[current_schema['ip_addr']]
-            self.host_name = details[current_schema['host_name']]
-            self.host_type = details[current_schema['host_type']]
+            self.uuid = details[self.current_schema['uuid']]
+            self.name = details[self.current_schema['name']]
+            self.host_dc_uuid = details[self.current_schema['host_dc_uuid']]
+            self.ip_addr = details[self.current_schema['ip_addr']]
+            self.host_name = details[self.current_schema['host_name']]
+            self.host_type = details[self.current_schema['host_type']]
             # determine host type from input
             if self.host_type == "0":
                 self.set_host_type("RHEL")
@@ -103,14 +129,12 @@ class Host():
     def del_host_dc_name(self):
         del self.host_dc_name
 
-
     def get_spm_status(self):
         return self.spm_status
 
 
     def get_release_ver(self):
         return self.releaseVer
-
 
     def set_spm_status(self, value):
         self.spm_status = value
@@ -143,73 +167,89 @@ class Host():
     def get_host_type(self):
         return self.host_type
 
-
     def set_host_type(self, value):
         self.host_type = value
-
 
     def del_host_type(self):
         del self.host_type
 
-
     def get_uuid(self):
         return self.uuid
-
 
     def get_name(self):
         return self.name
 
-
     def get_host_dc_uuid(self):
         return self.host_dc_uuid
-
 
     def get_ip_addr(self):
         return self.ip_addr
 
-
     def get_host_name(self):
         return self.host_name
-
 
     def set_uuid(self, value):
         self.uuid = value
 
-
     def set_name(self, value):
         self.name = value
-
 
     def set_host_dc_uuid(self, value):
         self.host_dc_uuid = value
 
-
     def set_ip_addr(self, value):
         self.ip_addr = value
-
 
     def set_host_name(self, value):
         self.host_name = value
 
-
     def del_uuid(self):
         del self.uuid
-
 
     def del_name(self):
         del self.name
 
-
     def del_host_dc_uuid(self):
         del self.host_dc_uuid
-
 
     def del_ip_addr(self):
         del self.ip_addr
 
-
     def del_host_name(self):
         del self.host_name
+
+    def get_vdsm_ver(self):
+        return self.vdsm_ver
+
+    def get_host_os(self):
+        return self.host_os
+
+    def get_kvm_ver(self):
+        return self.kvm_ver
+
+    def get_spice_ver(self):
+        return self.spice_ver
+
+    def get_kernel_ver(self):
+        return self.kernel_ver
+
+    def __repr__(self):
+        print "Host name: " + self.name
+        print "VDSM Ver: " + self.vdsm_ver
+
+    def updateHostDynamic(self, dynamic_list):
+
+        self.vdsm_ver = dynamic_list[self.current_schema['vdsm_ver']]
+        if '\N' in self.vdsm_ver:
+            self.vdsm_ver = "vdsm-error"
+        elif 'vdsm' not in self.vdsm_ver:
+            self.vdsm_ver = dynamic_list[self.current_schema['vdsm_ver']+1]
+        self.vdsm_ver = self.vdsm_ver.split("vdsm-")[1].rstrip('\n')
+        self.host_os = dynamic_list[self.current_schema['host_os']].replace(' ','')
+        self.kvm_ver = dynamic_list[self.current_schema['kvm_ver']].replace(' ','')
+        self.spice_ver = dynamic_list[self.current_schema['spice_ver']].replace(' ','')
+        self.kernel_ver = dynamic_list[self.current_schema['kernel_ver']].replace(' ','')
+
     host_dc_name = property(get_host_dc_name, set_host_dc_name, del_host_dc_name, "host_dc_name's docstring")
     _spm_status = property(get_spm_status, set_spm_status, None, None)
 

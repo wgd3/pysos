@@ -27,7 +27,7 @@ class Cluster():
         "name": 1,
         "cpu_type": 3,
         "dc_uuid": 11,
-        "compat_ver": 13,
+        "compat_ver": 12,
     }
     schema33 = {
         "uuid": 0,

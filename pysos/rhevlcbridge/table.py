@@ -136,7 +136,6 @@ class Table(object):
                         newVal = ""
                         #linecolor = colors.CYAN
                 dataStr = dataStr + "\"" + newVal + "\","
-
                 dataFmtStr = dataFmtStr + "{:^" + str(colWidths[index]) + "}\t"
                 index = index + 1
 
